@@ -1,66 +1,48 @@
-# Speed Equity
+# Sweat Equity
 
-## Overview
-
-Speed Equity is a web application designed to help users track their productive time versus wasted time on projects. The app calculates "sweat equity earned" and "money lost" based on user-defined project parameters, providing insights into project progress and motivation to stay on track.
+A productivity and equity tracking app for founders and collaborators.
 
 ## Features
 
-- **Onboarding Process**: Users can upload a project logo, enter project details such as name, planned hours per week, weeks to goal, and target company valuation.
-- **Dashboard**: Displays key performance indicators (KPIs) including implied value per hour, cumulative sweat equity earned, money lost from wasted time, and net progress. It also features charts for planned vs actual hours and forecasts to goal.
-- **Daily Check-ins**: Users can log their daily work achievements, hours worked, and hours wasted, which are stored for future reference.
-- **Settings**: Users can edit project valuation and timeline, with changes reflected in the KPIs.
-- **GitHub Integration**: (Optional) Users can connect their GitHub repositories to track commits and display progress alongside time metrics.
+- **Project creation:** Only authenticated users can create projects. Each project is linked to its owner.
+- **Daily check-in:** Log hours worked, achievements, hours wasted, and your plan for today. After submitting, you'll see a breakdown of money made and lost.
+- **Dashboard:** View KPIs, sweat equity earned, money lost, and progress charts.
+- **Project members:** Owners can invite collaborators by email and assign equity shares.
+- **Equity calculation:** Each member's earnings are based on their equity share.
+- **Project projections:** Only project owners can edit projections such as valuation and weeks-to-goal.
+- **Row Level Security (RLS):** All sensitive tables are protected so only authorized users can read or edit their own data.
 
-## Tech Stack
+## Daily Check-In
 
-- **Frontend**: React 18, Vite, TypeScript
-- **UI**: MUI v6 (Material UI), @mui/x-charts
-- **Auth/DB/Storage/Functions**: Supabase
-- **Styling**: MUI theme (light/dark), responsive layout
-- **Build**: PNPM
+- Go to the **Check-In** page (`/checkin`).
+- Answer:
+  1. How many hours did you work yesterday?
+  2. What did you achieve during that time?
+  3. How many hours did you waste yesterday?
+  4. What are you going to do today?
+- After submitting, a modal shows your money made and lost for the day.
+
+## Security & Access
+
+- **.env** and **node_modules** are excluded from git for security.
+- Only project owners can edit project projections (valuation, goal).
+- Only owners and accepted members can submit daily entries for a project.
+- All data access is protected by Supabase RLS policies.
 
 ## Getting Started
 
-### Prerequisites
+1. Clone the repo.
+2. Add your Supabase credentials to `.env`.
+3. Run `npm install`.
+4. Start the app with `npm run dev`.
 
-- Node.js (version 14 or higher)
-- PNPM (package manager)
+## Database Schema Highlights
 
-### Installation
-
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   cd speed-equity
-   ```
-
-2. Install dependencies:
-   ```
-   pnpm install
-   ```
-
-3. Set up environment variables in the `.env` file:
-   ```
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
-
-4. Run the application:
-   ```
-   pnpm dev
-   ```
-
-### Usage
-
-- Access the application in your browser at `http://localhost:3000`.
-- Follow the onboarding process to set up your project.
-- Use the dashboard to track your progress and make daily check-ins.
+- `projects`: Stores project info, owner, and goals.
+- `project_members`: Tracks invitations, join dates, and equity shares.
+- `project_projections`: Editable only by project owners.
+- `daily_entries`: Stores daily check-ins, linked to projects and users.
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request for any enhancements or bug fixes.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for more details.
+PRs welcome! Please open an issue for feature requests or bugs.
