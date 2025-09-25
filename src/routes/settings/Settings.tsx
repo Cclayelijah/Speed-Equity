@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../components/AuthProvider';
+import { useNavigate } from 'react-router-dom';
 
 const schema = z.object({
   valuation: z.number().nonnegative(),
@@ -16,6 +18,8 @@ type SettingsForm = {
 };
 
 const Settings = () => {
+  const navigate = useNavigate();
+  const { user, loading, signIn, signOut } = useAuth();
   const { register, handleSubmit, setValue } = useForm<SettingsForm>({
     resolver: zodResolver(schema),
   });
@@ -59,7 +63,17 @@ const Settings = () => {
 
   return (
     <Box sx={{ padding: 2 }}>
-      <Typography variant="h4">Settings</Typography>
+      <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3}}>
+        <Typography variant="h4">Project Settings</Typography>
+        <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
+          <Button
+            onClick={() => navigate('/dashboard')}
+            variant="outlined"
+          >
+            Dashboard
+          </Button>
+        </Box>
+      </Box>
       <form onSubmit={handleSubmit(onSubmit)}>
         <TextField
           {...register('valuation')}
@@ -77,10 +91,15 @@ const Settings = () => {
           margin="normal"
           required
         />
-        <Button type="submit" variant="contained" color="primary">
+        <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
           Update Settings
         </Button>
       </form>
+      <Typography variant="h4" sx={{ mt: 4, mb: 2 }}>User Settings</Typography>
+      <Box>
+        <Typography>Signed in as {user.email}</Typography>
+        <Button onClick={signOut} variant="outlined" color="error" sx={{ mt: 2 }}>Sign Out</Button>
+      </Box>
     </Box>
   );
 };

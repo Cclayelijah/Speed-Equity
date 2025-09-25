@@ -149,102 +149,106 @@ const DailyCheckInPage: React.FC = () => {
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 500, mx: 'auto', mt: 4 }}>
-      <Typography variant="h5" gutterBottom>Daily Check-In</Typography>
-      <Select
-        value={selectedProjectId}
-        onChange={e => setSelectedProjectId(e.target.value as string)}
-        fullWidth
-        sx={{ mb: 2 }}
-        displayEmpty
-        inputProps={{ 'aria-label': 'Project' }}
-        renderValue={selected => {
-          if (!selected) {
-            return <span style={{ color: '#888' }}>Select a project</span>;
-          }
-          const project = projects.find(p => p.id === selected);
-          return project ? project.name : '';
-        }}
-      >
-        {projects.map(project => (
-          <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
-        ))}
-      </Select>
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-        Project: Choose which project this check-in is for.
-      </Typography>
-      <TextField
-        label="How many hours did you work yesterday?"
-        type="number"
-        value={hoursWorked}
-        onChange={e => setHoursWorked(e.target.value)}
-        fullWidth
-        required
-        sx={{ mb: 2 }}
-      />
-      <TextField
-        label="What did you achieve during that time?"
-        value={completed}
-        onChange={e => setCompleted(e.target.value)}
-        fullWidth
-        multiline
-        required
-        sx={{ mb: 2 }}
-      />
-      <TextField
-        label="How many hours did you waste yesterday?"
-        type="number"
-        value={hoursWasted}
-        onChange={e => setHoursWasted(e.target.value)}
-        fullWidth
-        required
-        sx={{ mb: 2 }}
-      />
-      <TextField
-        label="What are you going to do today?"
-        value={planToComplete}
-        onChange={e => setPlanToComplete(e.target.value)}
-        fullWidth
-        multiline
-        required
-        sx={{ mb: 2 }}
-      />
-      <Button
-        type="submit"
-        variant="contained"
-        fullWidth
-        disabled={loading || recentCheckin}
-        sx={{ mb: 2 }}
-      >
-        {recentCheckin ? 'Already Submitted Recently' : loading ? 'Submitting...' : 'Submit'}
-      </Button>
-      <Button
-        variant="outlined"
-        fullWidth
-        onClick={() => navigate('/dashboard')}
-        sx={{ mb: 2 }}
-      >
-        Go to Dashboard
-      </Button>
-      {success && <Typography sx={{ mt: 2 }} color="success.main">Check-in saved!</Typography>}
+    <Box sx={{ padding: 2 }}>
+      <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3}}>
+              <Typography variant="h4">Daily Check In</Typography>
+              <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
+                <Button
+                  onClick={() => navigate('/dashboard')}
+                  variant="outlined"
+                >
+                  Dashboard
+                </Button>
+              </Box>
+            </Box>
+      <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 500, mx: 'auto', mt: 4 }}>
+        <Select
+          value={selectedProjectId}
+          onChange={e => setSelectedProjectId(e.target.value as string)}
+          fullWidth
+          sx={{ mb: 2 }}
+          displayEmpty
+          inputProps={{ 'aria-label': 'Project' }}
+          renderValue={selected => {
+            if (!selected) {
+              return <span style={{ color: '#888' }}>Select a project</span>;
+            }
+            const project = projects.find(p => p.id === selected);
+            return project ? project.name : '';
+          }}
+        >
+          {projects.map(project => (
+            <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
+          ))}
+        </Select>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+          Project: Choose which project this check-in is for.
+        </Typography>
+        <TextField
+          label="How many hours did you work yesterday?"
+          type="number"
+          value={hoursWorked}
+          onChange={e => setHoursWorked(e.target.value)}
+          fullWidth
+          required
+          sx={{ mb: 2 }}
+        />
+        <TextField
+          label="What did you achieve during that time?"
+          value={completed}
+          onChange={e => setCompleted(e.target.value)}
+          fullWidth
+          multiline
+          required
+          sx={{ mb: 2 }}
+        />
+        <TextField
+          label="How many hours did you waste yesterday?"
+          type="number"
+          value={hoursWasted}
+          onChange={e => setHoursWasted(e.target.value)}
+          fullWidth
+          required
+          sx={{ mb: 2 }}
+        />
+        <TextField
+          label="What are you going to do today?"
+          value={planToComplete}
+          onChange={e => setPlanToComplete(e.target.value)}
+          fullWidth
+          multiline
+          required
+          sx={{ mb: 2 }}
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          fullWidth
+          disabled={loading || recentCheckin}
+          sx={{ mb: 2 }}
+        >
+          {recentCheckin ? 'Already Submitted Recently' : loading ? 'Submitting...' : 'Submit'}
+        </Button>
+        {success && <Typography sx={{ mt: 2 }} color="success.main">Check-in saved!</Typography>}
 
-      <Dialog open={showModal} onClose={handleContinue}>
-        <DialogTitle>Daily Earnings Breakdown</DialogTitle>
-        <DialogContent>
-          <Typography>
-            <strong>Money Made:</strong> ${moneyMade.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-          </Typography>
-          <Typography>
-            <strong>Money Lost:</strong> ${moneyLost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-          </Typography>
-          <Typography sx={{ mt: 2 }}>
-            Based on your check-in, this is your sweat equity breakdown for today.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleContinue} variant="contained">Continue to Dashboard</Button>
-        </DialogActions>
-      </Dialog>
+        <Dialog open={showModal} onClose={handleContinue}>
+          <DialogTitle>Daily Earnings Breakdown</DialogTitle>
+          <DialogContent>
+            <Typography>
+              <strong>Money Made:</strong> ${moneyMade.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </Typography>
+            <Typography>
+              <strong>Money Lost:</strong> ${moneyLost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </Typography>
+            <Typography sx={{ mt: 2 }}>
+              Based on your check-in, this is your sweat equity breakdown for today.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleContinue} variant="contained">Continue to Dashboard</Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
     </Box>
   );
 };

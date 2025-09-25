@@ -16,14 +16,16 @@ const AuthPage: React.FC = () => {
   if (loading) return <Typography>Loading...</Typography>;
   if (user) return (
     <Box>
-      <Typography>Signed in as {user.email}</Typography>
-      <Button onClick={signOut} variant="contained">Sign Out</Button>
+      <Typography sx={{ mb: 3 }}>Signed in as {user.email}</Typography>
+      <Button onClick={signOut} variant="contained" sx={{ mt: 2 }}>
+        Sign Out
+      </Button>
     </Box>
   );
 
   return (
     <Box component="form" onSubmit={handleSignIn} sx={{ maxWidth: 400, mx: 'auto', mt: 4 }}>
-      <Typography variant="h5" gutterBottom>Sign In</Typography>
+      <Typography variant="h5" sx={{ mb: 3, mt: 2 }}>Sign In</Typography>
       <TextField
         label="Email"
         type="email"

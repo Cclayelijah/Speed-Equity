@@ -4,6 +4,7 @@ import { Typography, Box, Grid } from '@mui/material';
 import { LineChart, BarChart } from '@mui/x-charts';
 import KpiCard from '../../components/KpiCard';
 import { useNavigate } from 'react-router-dom';
+import CircularProgress from '@mui/material/CircularProgress';
 
 type DailyEntry = {
   entry_date: string;
@@ -45,7 +46,14 @@ const Dashboard = () => {
   }, []);
 
   if (loading) {
-    return <Typography>Loading...</Typography>;
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <CircularProgress color="primary" size={60} sx={{ mb: 3 }} />
+        <Typography variant="h6" color="text.secondary">
+          Loading your dashboard...
+        </Typography>
+      </Box>
+    );
   }
 
   if (!projectStats) {
@@ -82,7 +90,7 @@ const Dashboard = () => {
         <Typography variant="h4" gutterBottom>
           Dashboard
         </Typography>
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
           <button
             onClick={() => navigate('/checkin')}
             style={{
@@ -96,6 +104,20 @@ const Dashboard = () => {
             }}
           >
             Submit Report
+          </button>
+          <button
+            onClick={() => navigate('/settings')}
+            style={{
+              padding: '10px 20px',
+              fontSize: '16px',
+              backgroundColor: '#757575',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Settings
           </button>
         </Box>
       </Box>
