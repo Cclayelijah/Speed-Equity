@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, TextField, Button, Select, MenuItem } from '@mui/material';
+import { Box, Typography, TextField, Button, Select, MenuItem, Alert } from '@mui/material';
 import { useAuth } from '../../components/AuthProvider';
 import { supabase } from '../../lib/supabase';
 import { fetchOwnedProjects } from '../../lib/projectHelpers';
@@ -9,19 +9,60 @@ type ProjectDetails = {
   id: string;
   name: string;
   target_valuation?: number;
-  weeks_to_goal?: number;
+  work_hours_until_completion?: number;
   logo_url?: string;
+  owner_id?: string;
 };
 
+function useUpsertProjectProjection(project_id: string) {
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const upsert = async (work_hours_until_completion: number) => {
+    setLoading(true);
+    setError(null);
+    const { error } = await supabase
+      .from('project_projections')
+      .upsert([
+        {
+          project_id,
+          work_hours_until_completion,
+          effective_from: new Date().toISOString().slice(0, 10), // today
+        }
+      ]);
+    setLoading(false);
+    if (error) {
+      if (error.message.toLowerCase().includes('rls')) {
+        setError('Only the project owner can change projections.');
+      } else {
+        setError(error.message);
+      }
+      return false;
+    }
+    return true;
+  };
+
+  return { upsert, error, loading };
+}
+
 const Settings = () => {
-  const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectDetails[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<ProjectDetails | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // New state for projection form
+  const [projectionForm, setProjectionForm] = useState<number>(0);
+
+  // Check if user is owner
+  const isOwner = projectDetails && user && projectDetails.owner_id === user.id;
+
+  // Upsert hook
+  const { upsert, error: projectionError, loading: projectionLoading } = useUpsertProjectProjection(selectedProjectId);
 
   useEffect(() => {
     const getProjects = async () => {
@@ -42,7 +83,7 @@ const Settings = () => {
       }
       const { data } = await supabase
         .from('projects')
-        .select('id, name, logo_url, planned_hours_per_week, target_valuation, weeks_to_goal')
+        .select('id, name, logo_url, target_valuation, work_hours_until_completion, owner_id')
         .eq('id', selectedProjectId)
         .single();
       setProjectDetails({...data} as ProjectDetails);
@@ -72,15 +113,23 @@ const Settings = () => {
       .from('projects')
       .update({
         name: form.name,
-        planned_hours_per_week: form.planned_hours_per_week,
         target_valuation: form.target_valuation,
-        weeks_to_goal: form.weeks_to_goal,
+        work_hours_until_completion: form.work_hours_until_completion,
       })
       .eq('id', form.id);
     setSaving(false);
     setEditMode(false);
     // Refresh details
     setProjectDetails(form);
+  };
+
+  const handleProjectionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const success = await upsert(projectionForm);
+    if (success) {
+      setEditMode(false);
+      setProjectionForm(0);
+    }
   };
 
   return (
@@ -130,56 +179,36 @@ const Settings = () => {
         <Box sx={{ mt: 2, mb: 2 }}>
           <Typography variant="subtitle1"><strong>Name:</strong> {projectDetails.name}</Typography>
           <Typography variant="body2"><strong>Target Valuation:</strong> {projectDetails.target_valuation ?? '-'}</Typography>
-          <Typography variant="body2"><strong>Weeks to Goal:</strong> {projectDetails.weeks_to_goal ?? '-'}</Typography>
-          <Button sx={{ mt: 2 }} variant="contained" onClick={handleEdit}>Edit</Button>
+          <Typography variant="body2"><strong>Work Hours Until Completion:</strong> {projectDetails.work_hours_until_completion ?? '-'}</Typography>
+          {isOwner && (
+            <Button sx={{ mt: 2 }} variant="contained" onClick={handleEdit}>Edit Projection</Button>
+          )}
         </Box>
       )}
 
-      {projectDetails && editMode && (
+      {projectDetails && editMode && isOwner && (
         <Box sx={{ mt: 2, mb: 2 }}>
-          <TextField
-            label="Name"
-            value={form?.name ?? ''}
-            onChange={e => handleChange('name', e.target.value)}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Planned Hours/Week"
-            type="number"
-            value={form?.planned_hours_per_week ?? ''}
-            onChange={e => handleChange('planned_hours_per_week', Number(e.target.value))}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Target Valuation"
-            type="number"
-            value={form?.target_valuation ?? ''}
-            onChange={e => handleChange('target_valuation', Number(e.target.value))}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Weeks to Goal"
-            type="number"
-            value={form?.weeks_to_goal ?? ''}
-            onChange={e => handleChange('weeks_to_goal', Number(e.target.value))}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            <strong>Implied Hour Value:</strong>{' '}
-            {form?.target_valuation && form?.planned_hours_per_week && form?.weeks_to_goal
-              ? ((form.target_valuation) / (form.planned_hours_per_week * form.weeks_to_goal)).toFixed(2)
-              : '-'}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" color="primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-            <Button variant="outlined" onClick={handleCancel}>Cancel</Button>
-          </Box>
+          <form onSubmit={handleProjectionSubmit}>
+            <TextField
+              label="Work Hours Until Completion"
+              type="number"
+              value={form?.work_hours_until_completion ?? ''}
+              onChange={e => handleChange('work_hours_until_completion', Number(e.target.value))}
+              fullWidth
+              sx={{ mb: 2 }}
+            />
+            {projectionError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {projectionError}
+              </Alert>
+            )}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button variant="contained" color="primary" type="submit" disabled={projectionLoading}>
+                {projectionLoading ? 'Saving...' : 'Save Projection'}
+              </Button>
+              <Button variant="outlined" onClick={handleCancel}>Cancel</Button>
+            </Box>
+          </form>
         </Box>
       )}
 

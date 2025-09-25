@@ -1,183 +1,131 @@
 import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '../../lib/supabase';
-import { Button, TextField, Typography, Box } from '@mui/material';
-import FileUpload from '../../components/FileUpload';
-import { useNavigate } from 'react-router-dom';
+import {
+  Button,
+  Typography,
+  Box,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Avatar,
+  Paper,
+  Divider,
+  Fade,
+} from '@mui/material';
+import AddProject from '../add-project/AddProject';
+import AddIcon from '@mui/icons-material/Add';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useAuth } from '../../components/AuthProvider';
 
-const schema = z.object({
-  projectName: z.string().min(1, 'Project name is required'),
-  plannedHoursPerWeek: z.number().min(0, 'Planned hours must be at least 0'),
-  weeksToGoal: z.number().min(1, 'Weeks to goal must be at least 1'),
-  targetValuation: z.number().min(0, 'Target valuation must be at least 0'),
-});
-
 const Onboarding = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const { register, handleSubmit, formState: { errors }, getValues } = useForm({
-    resolver: zodResolver(schema),
-  });
-
-  interface OnboardingFormData {
-    projectName: string;
-    plannedHoursPerWeek: number;
-    weeksToGoal: number;
-    targetValuation: number;
-  }
-
-  interface Project {
-    id: string;
-    name: string;
-    planned_hours_per_week: number;
-    weeks_to_goal: number;
-    target_valuation: number;
-    logo_url?: string;
-  }
+  const [invitedProjects, setInvitedProjects] = useState<any[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
-    const checkProject = async () => {
-      if (user) {
-        const { data: projects } = await supabase
-          .from('projects')
-          .select('id')
-          .eq('owner_id', user.id)
-          .limit(1);
-
-        if (projects && projects.length > 0) {
-          navigate('/dashboard', { replace: true });
-        }
-      }
-    };
-    checkProject();
-  }, [user, navigate]);
-
-  const onSubmit = async (data: OnboardingFormData) => {
-    const { projectName, plannedHoursPerWeek, weeksToGoal, targetValuation } = data;
-    const { data: userData } = await supabase.auth.getUser();
-    const ownerId = userData?.user?.id;
-    const email = userData?.user?.email;
-
-    // Ensure profile exists for the user
-    if (ownerId) {
-      await supabase
-        .from('profiles')
-        .upsert([{ id: ownerId, email }]);
+    if (user) {
+      supabase
+        .from('project_invitations')
+        .select('project_id, projects(name, logo_url)')
+        .eq('user_id', user.id)
+        .then(({ data }) => setInvitedProjects(data ?? []));
     }
+  }, [user]);
 
-    // Now create the project
-    const { data: projectData, error } = await supabase
-      .from('projects')
-      .insert([
-        {
-          name: projectName,
-          planned_hours_per_week: plannedHoursPerWeek,
-          weeks_to_goal: weeksToGoal,
-          target_valuation: targetValuation,
-          owner_id: ownerId,
-        },
-      ])
-      .select()
-      .single<Project>();
-
-    if (error || !projectData) {
-      console.error('Error creating project:', error);
-      return;
-    }
-
-    setProjectId(projectData.id);
-  };
-
-  // Step 2: Handle logo upload after project is created
-  const handleLogoUpload = async (url: string) => {
-    setLogoUrl(url);
-    if (!projectId) return;
-
-    const { error } = await supabase
-      .from('projects')
-      .update({ logo_url: url })
-      .eq('id', projectId);
-
-    if (error) {
-      console.error('Error updating logo URL:', error);
-      return;
-    }
-
-    // Step 3: Create initial valuation row
-    const { weeksToGoal, targetValuation } = getValues();
+  const handleJoinProject = async (projectId: string) => {
     await supabase
-      .from('project_valuations')
-      .insert([
-        {
-          project_id: projectId,
-          valuation: targetValuation,
-          weeks_to_goal: weeksToGoal,
-          effective_from: new Date().toISOString().slice(0, 10),
-        },
-      ]);
-
-    navigate('/dashboard');
+      .from('project_members')
+      .insert([{ project_id: projectId, user_id: user.id }]);
+    window.dispatchEvent(new CustomEvent('show-toast', {
+      detail: { message: 'Joined project!', severity: 'success' }
+    }));
+    window.location.href = '/dashboard';
   };
+
+  if (!user) return null;
 
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ maxWidth: 400, mx: 'auto', mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Onboarding
-      </Typography>
-      <TextField
-        label="Project Name"
-        variant="outlined"
-        fullWidth
-        margin="normal"
-        {...register('projectName')}
-        error={!!errors.projectName}
-        helperText={errors.projectName?.message}
-      />
-      <TextField
-        label="Planned Hours per Week"
-        variant="outlined"
-        fullWidth
-        margin="normal"
-        type="number"
-        {...register('plannedHoursPerWeek', { valueAsNumber: true })}
-        error={!!errors.plannedHoursPerWeek}
-        helperText={errors.plannedHoursPerWeek?.message}
-      />
-      <TextField
-        label="Weeks to Goal"
-        variant="outlined"
-        fullWidth
-        margin="normal"
-        type="number"
-        {...register('weeksToGoal', { valueAsNumber: true })}
-        error={!!errors.weeksToGoal}
-        helperText={errors.weeksToGoal?.message}
-      />
-      <TextField
-        label="Target Valuation"
-        variant="outlined"
-        fullWidth
-        margin="normal"
-        type="number"
-        {...register('targetValuation', { valueAsNumber: true })}
-        error={!!errors.targetValuation}
-        helperText={errors.targetValuation?.message}
-      />
-      <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }} disabled={!!projectId}>
-        Create Project
-      </Button>
-      {projectId && (
-        <FileUpload
-          projectId={projectId}
-          onUploadComplete={handleLogoUpload}
-        />
-      )}
-    </Box>
+    <Fade in>
+      <Box sx={{
+        maxWidth: 500,
+        mx: 'auto',
+        mt: 6,
+        p: 3,
+        borderRadius: 3,
+        boxShadow: 3,
+        bgcolor: 'background.paper',
+      }}>
+        <Typography variant="h3" gutterBottom align="center" sx={{ fontWeight: 700, color: 'primary.main' }}>
+          Welcome!
+        </Typography>
+        <Typography sx={{ mb: 4 }} align="center" color="text.secondary">
+          Get started by creating a new project or joining one you've been invited to.
+        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4 }}>
+          <Button
+            variant={showCreate ? "contained" : "outlined"}
+            startIcon={<AddIcon />}
+            size="large"
+            onClick={() => setShowCreate(true)}
+            sx={{ minWidth: 160, fontWeight: 600 }}
+          >
+            Create Project
+          </Button>
+        </Box>
+        <Divider sx={{ mb: 4 }} />
+        {showCreate && (
+          <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
+            <AddProject ownerId={user.id} />
+          </Paper>
+        )}
+        <Typography variant="h5" sx={{ mb: 2, mt: 2, fontWeight: 600 }}>
+          <GroupAddIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          Invited to Join
+        </Typography>
+        <List>
+          {invitedProjects.length === 0 && (
+            <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+              No invitations found.
+            </Typography>
+          )}
+          {invitedProjects.map(invite => (
+            <Paper key={invite.project_id} elevation={1} sx={{ mb: 2, p: 2, borderRadius: 2 }}>
+              <ListItem
+                secondaryAction={
+                  <Button
+                    variant="contained"
+                    endIcon={<ArrowForwardIcon />}
+                    onClick={() => handleJoinProject(invite.project_id)}
+                    sx={{ fontWeight: 600 }}
+                  >
+                    Join Project
+                  </Button>
+                }
+              >
+                <ListItemIcon>
+                  <Avatar
+                    src={invite.projects.logo_url}
+                    sx={{ width: 48, height: 48, bgcolor: 'primary.light', mr: 2 }}
+                  >
+                    {invite.projects.name?.[0] ?? '?'}
+                  </Avatar>
+                </ListItemIcon>
+                <ListItemText
+                  primary={
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      {invite.projects.name}
+                    </Typography>
+                  }
+                  secondary="You've been invited to join this project."
+                />
+              </ListItem>
+            </Paper>
+          ))}
+        </List>
+      </Box>
+    </Fade>
   );
 };
 
