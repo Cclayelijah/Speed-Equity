@@ -16,26 +16,86 @@ const DailyCheckInPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [moneyMade, setMoneyMade] = useState<number>(0);
   const [moneyLost, setMoneyLost] = useState<number>(0);
+  const [recentCheckin, setRecentCheckin] = useState(false);
 
   const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch user's projects and implied_hour_value for calculation
-    const fetchProjects = async () => {
-      const { data, error } = await supabase
+    const fetchProjectsAndCheckin = async () => {
+      if (!user) return;
+
+      // Fetch projects where the user is a member
+      const { data: memberProjects, error: memberProjectsError } = await supabase
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', user.id);
+
+      const memberProjectIds = memberProjects?.map((pm: any) => pm.project_id) || [];
+
+      // Fetch projects where the user is the owner
+      const { data: ownedProjects, error: ownedProjectsError } = await supabase
         .from('projects')
-        .select('id, name, planned_hours_per_week, target_valuation, weeks_to_goal, implied_hour_value');
-      if (data) setProjects(data);
-      if (data && data.length > 0) setSelectedProjectId(data[0].id);
+        .select('id, name')
+        .eq('owner_id', user.id);
+
+      // Fetch projects where the user is a member (only if there are memberProjectIds)
+      let memberProjectsData: any[] = [];
+      if (memberProjectIds.length > 0) {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('id, name')
+          .in('id', memberProjectIds);
+        memberProjectsData = data ?? [];
+      }
+
+      // Combine and deduplicate projects
+      const allProjects = [
+        ...(ownedProjects ?? []),
+        ...memberProjectsData
+      ];
+      const uniqueProjects = Array.from(
+        new Map(allProjects.map(p => [p.id, p])).values()
+      );
+
+      setProjects(uniqueProjects);
+      if (uniqueProjects.length > 0) setSelectedProjectId(uniqueProjects[0].id);
+
+      // Check for recent check-in (within last 10 hours)
+      if (uniqueProjects.length > 0) {
+        const { data: recentEntries } = await supabase
+          .from('daily_entries')
+          .select('created_at')
+          .eq('created_by', user.id)
+          .eq('project_id', uniqueProjects[0].id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (
+          recentEntries &&
+          recentEntries.length > 0 &&
+          recentEntries[0].created_at
+        ) {
+          const lastCheckin = new Date(recentEntries[0].created_at).getTime();
+          const now = Date.now();
+          const hoursSince = (now - lastCheckin) / (1000 * 60 * 60);
+          setRecentCheckin(hoursSince < 10);
+        }
+      }
     };
-    fetchProjects();
-  }, []);
+    fetchProjectsAndCheckin();
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(false);
+
+    if (recentCheckin) {
+      alert('You have already submitted a report within the last 10 hours.');
+      setLoading(false);
+      return;
+    }
 
     if (!selectedProjectId) {
       alert('Please select a project.');
@@ -96,11 +156,23 @@ const DailyCheckInPage: React.FC = () => {
         onChange={e => setSelectedProjectId(e.target.value as string)}
         fullWidth
         sx={{ mb: 2 }}
+        displayEmpty
+        inputProps={{ 'aria-label': 'Project' }}
+        renderValue={selected => {
+          if (!selected) {
+            return <span style={{ color: '#888' }}>Select a project</span>;
+          }
+          const project = projects.find(p => p.id === selected);
+          return project ? project.name : '';
+        }}
       >
         {projects.map(project => (
           <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
         ))}
       </Select>
+      <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+        Project: Choose which project this check-in is for.
+      </Typography>
       <TextField
         label="How many hours did you work yesterday?"
         type="number"
@@ -137,8 +209,22 @@ const DailyCheckInPage: React.FC = () => {
         required
         sx={{ mb: 2 }}
       />
-      <Button type="submit" variant="contained" fullWidth disabled={loading}>
-        {loading ? 'Submitting...' : 'Submit'}
+      <Button
+        type="submit"
+        variant="contained"
+        fullWidth
+        disabled={loading || recentCheckin}
+        sx={{ mb: 2 }}
+      >
+        {recentCheckin ? 'Already Submitted Recently' : loading ? 'Submitting...' : 'Submit'}
+      </Button>
+      <Button
+        variant="outlined"
+        fullWidth
+        onClick={() => navigate('/dashboard')}
+        sx={{ mb: 2 }}
+      >
+        Go to Dashboard
       </Button>
       {success && <Typography sx={{ mt: 2 }} color="success.main">Check-in saved!</Typography>}
 
