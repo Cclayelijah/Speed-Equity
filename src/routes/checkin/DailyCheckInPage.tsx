@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { Box, Button, TextField, Typography, Select, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { useAuth } from '../../components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
+import { fetchUserProjects } from '../../lib/projectHelpers'; // <-- import the helper
 
 const DailyCheckInPage: React.FC = () => {
   const [projects, setProjects] = useState<{ id: string; name: string; implied_hour_value?: number }[]>([]);
@@ -25,38 +26,8 @@ const DailyCheckInPage: React.FC = () => {
     const fetchProjectsAndCheckin = async () => {
       if (!user) return;
 
-      // Fetch projects where the user is a member
-      const { data: memberProjects, error: memberProjectsError } = await supabase
-        .from('project_members')
-        .select('project_id')
-        .eq('user_id', user.id);
-
-      const memberProjectIds = memberProjects?.map((pm: any) => pm.project_id) || [];
-
-      // Fetch projects where the user is the owner
-      const { data: ownedProjects, error: ownedProjectsError } = await supabase
-        .from('projects')
-        .select('id, name')
-        .eq('owner_id', user.id);
-
-      // Fetch projects where the user is a member (only if there are memberProjectIds)
-      let memberProjectsData: any[] = [];
-      if (memberProjectIds.length > 0) {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('id, name')
-          .in('id', memberProjectIds);
-        memberProjectsData = data ?? [];
-      }
-
-      // Combine and deduplicate projects
-      const allProjects = [
-        ...(ownedProjects ?? []),
-        ...memberProjectsData
-      ];
-      const uniqueProjects = Array.from(
-        new Map(allProjects.map(p => [p.id, p])).values()
-      );
+      // Use the helper to get all projects for the user
+      const uniqueProjects = await fetchUserProjects(user.id);
 
       setProjects(uniqueProjects);
       if (uniqueProjects.length > 0) setSelectedProjectId(uniqueProjects[0].id);
@@ -151,16 +122,16 @@ const DailyCheckInPage: React.FC = () => {
   return (
     <Box sx={{ padding: 2 }}>
       <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3}}>
-              <Typography variant="h4">Daily Check In</Typography>
-              <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
-                <Button
-                  onClick={() => navigate('/dashboard')}
-                  variant="outlined"
-                >
-                  Dashboard
-                </Button>
-              </Box>
-            </Box>
+        <Typography variant="h4">Daily Check In</Typography>
+        <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
+          <Button
+            onClick={() => navigate('/dashboard')}
+            variant="outlined"
+          >
+            Dashboard
+          </Button>
+        </Box>
+      </Box>
       <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 500, mx: 'auto', mt: 4 }}>
         <Select
           value={selectedProjectId}

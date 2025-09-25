@@ -1,64 +1,86 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, TextField, Typography } from '@mui/material';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { supabase } from '../../lib/supabase';
+import { Box, Typography, TextField, Button, Select, MenuItem } from '@mui/material';
 import { useAuth } from '../../components/AuthProvider';
+import { supabase } from '../../lib/supabase';
+import { fetchOwnedProjects } from '../../lib/projectHelpers';
 import { useNavigate } from 'react-router-dom';
 
-const schema = z.object({
-  valuation: z.number().nonnegative(),
-  weeksToGoal: z.number().positive(),
-});
-
-type SettingsForm = {
-  valuation: number;
-  weeksToGoal: number;
+type ProjectDetails = {
+  id: string;
+  name: string;
+  target_valuation?: number;
+  weeks_to_goal?: number;
+  logo_url?: string;
 };
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { user, loading, signIn, signOut } = useAuth();
-  const { register, handleSubmit, setValue } = useForm<SettingsForm>({
-    resolver: zodResolver(schema),
-  });
-  
-  const [currentValuation, setCurrentValuation] = useState<number | null>(null);
-  const [currentWeeksToGoal, setCurrentWeeksToGoal] = useState<number | null>(null);
+  const { user, signOut } = useAuth();
+  const [projects, setProjects] = useState<ProjectDetails[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [form, setForm] = useState<ProjectDetails | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const fetchCurrentSettings = async () => {
-      const { data, error } = await supabase
-        .from('project_valuations')
-        .select('valuation, weeks_to_goal')
-        .order('effective_from', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error) {
-        console.error('Error fetching settings:', error);
-      } else {
-        setCurrentValuation(data.valuation);
-        setCurrentWeeksToGoal(data.weeks_to_goal);
-        setValue('valuation', data.valuation);
-        setValue('weeksToGoal', data.weeks_to_goal);
-      }
+    const getProjects = async () => {
+      if (!user) return;
+      const projects = await fetchOwnedProjects(user.id);
+      setProjects(projects);
+      if (projects.length > 0) setSelectedProjectId(projects[0].id);
     };
+    getProjects();
+  }, [user]);
 
-    fetchCurrentSettings();
-  }, [setValue]);
+  useEffect(() => {
+    const fetchProjectDetails = async () => {
+      // Only fetch if selectedProjectId is valid and exists in projects
+      if (!selectedProjectId || !projects.find(p => p.id === selectedProjectId)) {
+        setProjectDetails(null);
+        return;
+      }
+      const { data } = await supabase
+        .from('projects')
+        .select('id, name, logo_url, planned_hours_per_week, target_valuation, weeks_to_goal')
+        .eq('id', selectedProjectId)
+        .single();
+      setProjectDetails({...data} as ProjectDetails);
+      setForm(data ?? null);
+    };
+    fetchProjectDetails();
+  }, [selectedProjectId, editMode, projects]);
 
-  const onSubmit = async (data: SettingsForm) => {
+  const handleEdit = () => {
+    setEditMode(true);
+    setForm(projectDetails);
+  };
+
+  const handleCancel = () => {
+    setEditMode(false);
+    setForm(projectDetails);
+  };
+
+  const handleChange = (field: keyof ProjectDetails, value: any) => {
+    setForm(prev => prev ? { ...prev, [field]: value } : prev);
+  };
+
+  const handleSave = async () => {
+    if (!form) return;
+    setSaving(true);
     const { error } = await supabase
-      .from('project_valuations')
-      .insert([{ valuation: data.valuation, weeks_to_goal: data.weeksToGoal, effective_from: new Date() }]);
-
-    if (error) {
-      console.error('Error updating settings:', error);
-    } else {
-      alert('Settings updated successfully!');
-    }
+      .from('projects')
+      .update({
+        name: form.name,
+        planned_hours_per_week: form.planned_hours_per_week,
+        target_valuation: form.target_valuation,
+        weeks_to_goal: form.weeks_to_goal,
+      })
+      .eq('id', form.id);
+    setSaving(false);
+    setEditMode(false);
+    // Refresh details
+    setProjectDetails(form);
   };
 
   return (
@@ -74,27 +96,93 @@ const Settings = () => {
           </Button>
         </Box>
       </Box>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <TextField
-          {...register('valuation')}
-          label="Target Valuation"
-          type="number"
-          fullWidth
-          margin="normal"
-          required
-        />
-        <TextField
-          {...register('weeksToGoal')}
-          label="Weeks to Goal"
-          type="number"
-          fullWidth
-          margin="normal"
-          required
-        />
-        <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
-          Update Settings
-        </Button>
-      </form>
+      <Select
+        value={selectedProjectId}
+        onChange={e => setSelectedProjectId(e.target.value as string)}
+        sx={{
+          minWidth: 180,
+          height: '40px',
+          mb: 2,
+          '& .MuiSelect-select': {
+            paddingTop: '10px',
+            paddingBottom: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            height: '40px',
+          }
+        }}
+        displayEmpty
+        inputProps={{ 'aria-label': 'Project' }}
+        renderValue={selected => {
+          if (!selected) {
+            return <span style={{ color: '#888' }}>Select a project</span>;
+          }
+          const project = projects.find(p => p.id === selected);
+          return project ? project.name : '';
+        }}
+      >
+        {projects.map(project => (
+          <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
+        ))}
+      </Select>
+
+      {projectDetails && !editMode && (
+        <Box sx={{ mt: 2, mb: 2 }}>
+          <Typography variant="subtitle1"><strong>Name:</strong> {projectDetails.name}</Typography>
+          <Typography variant="body2"><strong>Target Valuation:</strong> {projectDetails.target_valuation ?? '-'}</Typography>
+          <Typography variant="body2"><strong>Weeks to Goal:</strong> {projectDetails.weeks_to_goal ?? '-'}</Typography>
+          <Button sx={{ mt: 2 }} variant="contained" onClick={handleEdit}>Edit</Button>
+        </Box>
+      )}
+
+      {projectDetails && editMode && (
+        <Box sx={{ mt: 2, mb: 2 }}>
+          <TextField
+            label="Name"
+            value={form?.name ?? ''}
+            onChange={e => handleChange('name', e.target.value)}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Planned Hours/Week"
+            type="number"
+            value={form?.planned_hours_per_week ?? ''}
+            onChange={e => handleChange('planned_hours_per_week', Number(e.target.value))}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Target Valuation"
+            type="number"
+            value={form?.target_valuation ?? ''}
+            onChange={e => handleChange('target_valuation', Number(e.target.value))}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Weeks to Goal"
+            type="number"
+            value={form?.weeks_to_goal ?? ''}
+            onChange={e => handleChange('weeks_to_goal', Number(e.target.value))}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            <strong>Implied Hour Value:</strong>{' '}
+            {form?.target_valuation && form?.planned_hours_per_week && form?.weeks_to_goal
+              ? ((form.target_valuation) / (form.planned_hours_per_week * form.weeks_to_goal)).toFixed(2)
+              : '-'}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button variant="contained" color="primary" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+            <Button variant="outlined" onClick={handleCancel}>Cancel</Button>
+          </Box>
+        </Box>
+      )}
+
       <Typography variant="h4" sx={{ mt: 4, mb: 2 }}>User Settings</Typography>
       <Box>
         <Typography>Signed in as {user.email}</Typography>

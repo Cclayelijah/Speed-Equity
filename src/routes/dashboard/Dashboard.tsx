@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Typography, Box, Grid } from '@mui/material';
+import { Typography, Box, Grid, Select, MenuItem } from '@mui/material';
 import { LineChart, BarChart } from '@mui/x-charts';
 import KpiCard from '../../components/KpiCard';
 import { useNavigate } from 'react-router-dom';
@@ -16,18 +16,35 @@ const Dashboard = () => {
   const [projectStats, setProjectStats] = useState<any>(null);
   const [dailyEntries, setDailyEntries] = useState<DailyEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const navigate = useNavigate();
 
   useEffect(() => {
+    const fetchProjects = async () => {
+      const { data } = await supabase
+        .from('projects')
+        .select('id, name');
+      setProjects(data ?? []);
+      if (data && data.length > 0) setSelectedProjectId(data[0].id);
+    };
+    fetchProjects();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    setLoading(true);
     const fetchData = async () => {
       const { data: stats } = await supabase
         .from('project_stats')
         .select('*')
+        .eq('project_id', selectedProjectId)
         .single();
 
       const { data: entries, error } = await supabase
         .from('daily_entries')
         .select('*')
+        .eq('project_id', selectedProjectId)
         .order('entry_date', { ascending: false })
         .limit(30);
 
@@ -43,7 +60,7 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, []);
+  }, [selectedProjectId]);
 
   if (loading) {
     return (
@@ -90,7 +107,35 @@ const Dashboard = () => {
         <Typography variant="h4" gutterBottom>
           Dashboard
         </Typography>
-        <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
+        <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Select
+            value={selectedProjectId}
+            onChange={e => setSelectedProjectId(e.target.value as string)}
+            sx={{
+              minWidth: 180,
+              height: '40px', // Match button height
+              '& .MuiSelect-select': {
+                paddingTop: '10px',
+                paddingBottom: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                height: '40px',
+              }
+            }}
+            displayEmpty
+            inputProps={{ 'aria-label': 'Project' }}
+            renderValue={selected => {
+              if (!selected) {
+                return <span style={{ color: '#888' }}>Select a project</span>;
+              }
+              const project = projects.find(p => p.id === selected);
+              return project ? project.name : '';
+            }}
+          >
+            {projects.map(project => (
+              <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
+            ))}
+          </Select>
           <button
             onClick={() => navigate('/checkin')}
             style={{
