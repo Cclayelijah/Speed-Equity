@@ -150,6 +150,62 @@ export type Database = {
         }
         Relationships: []
       }
+      project_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          email: string
+          id: string
+          project_id: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          project_id: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          project_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "member_dashboard"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_dashboard"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_invitations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           email: string
@@ -211,6 +267,7 @@ export type Database = {
       }
       project_projections: {
         Row: {
+          active: boolean
           effective_from: string
           id: string
           project_id: string
@@ -218,6 +275,7 @@ export type Database = {
           work_hours_until_completion: number
         }
         Insert: {
+          active?: boolean
           effective_from?: string
           id?: string
           project_id: string
@@ -225,6 +283,7 @@ export type Database = {
           work_hours_until_completion: number
         }
         Update: {
+          active?: boolean
           effective_from?: string
           id?: string
           project_id?: string
@@ -262,8 +321,6 @@ export type Database = {
           logo_url: string | null
           name: string
           owner_id: string
-          target_valuation: number
-          work_hours_until_completion: number
         }
         Insert: {
           created_at?: string | null
@@ -271,8 +328,6 @@ export type Database = {
           logo_url?: string | null
           name: string
           owner_id: string
-          target_valuation: number
-          work_hours_until_completion: number
         }
         Update: {
           created_at?: string | null
@@ -280,8 +335,6 @@ export type Database = {
           logo_url?: string | null
           name?: string
           owner_id?: string
-          target_valuation?: number
-          work_hours_until_completion?: number
         }
         Relationships: [
           {
@@ -342,6 +395,21 @@ export type Database = {
       }
     }
     Functions: {
+      accept_project_invite: {
+        Args: { p_invite_id: string }
+        Returns: {
+          accepted_at: string | null
+          created_at: string | null
+          email: string
+          id: string
+          project_id: string
+          user_id: string | null
+        }
+      }
+      current_user_email: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       is_current_user_project_member: {
         Args: { p_project_id: string }
         Returns: boolean
@@ -349,6 +417,23 @@ export type Database = {
       is_current_user_project_owner: {
         Args: { p_project_id: string }
         Returns: boolean
+      }
+      set_active_projection: {
+        Args: {
+          p_effective_from?: string
+          p_project_id: string
+          p_projection_id?: string
+          p_valuation: number
+          p_work_hours_until_completion: number
+        }
+        Returns: {
+          active: boolean
+          effective_from: string
+          id: string
+          project_id: string
+          valuation: number
+          work_hours_until_completion: number
+        }
       }
     }
     Enums: {

@@ -1,221 +1,191 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, TextField, Button, Select, MenuItem, Alert } from '@mui/material';
+import { Box, Typography, Button, List, ListItem, ListItemText, ListItemSecondaryAction, Avatar, Paper, Chip, Divider, Skeleton } from '@mui/material';
 import { useAuth } from '../../components/AuthProvider';
 import { supabase } from '../../lib/supabase';
-import { fetchOwnedProjects } from '../../lib/projectHelpers';
 import { useNavigate } from 'react-router-dom';
-
-type ProjectDetails = {
-  id: string;
-  name: string;
-  target_valuation?: number;
-  work_hours_until_completion?: number;
-  logo_url?: string;
-  owner_id?: string;
-};
-
-function useUpsertProjectProjection(project_id: string) {
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const upsert = async (work_hours_until_completion: number) => {
-    setLoading(true);
-    setError(null);
-    const { error } = await supabase
-      .from('project_projections')
-      .upsert([
-        {
-          project_id,
-          work_hours_until_completion,
-          effective_from: new Date().toISOString().slice(0, 10), // today
-        }
-      ]);
-    setLoading(false);
-    if (error) {
-      if (error.message.toLowerCase().includes('rls')) {
-        setError('Only the project owner can change projections.');
-      } else {
-        setError(error.message);
-      }
-      return false;
-    }
-    return true;
-  };
-
-  return { upsert, error, loading };
-}
+import AddIcon from '@mui/icons-material/Add';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
 
 const Settings = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<ProjectDetails[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
-  const [editMode, setEditMode] = useState(false);
-  const [form, setForm] = useState<ProjectDetails | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  // New state for projection form
-  const [projectionForm, setProjectionForm] = useState<number>(0);
-
-  // Check if user is owner
-  const isOwner = projectDetails && user && projectDetails.owner_id === user.id;
-
-  // Upsert hook
-  const { upsert, error: projectionError, loading: projectionLoading } = useUpsertProjectProjection(selectedProjectId);
+  const [myProjects, setMyProjects] = useState<any[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getProjects = async () => {
-      if (!user) return;
-      const projects = await fetchOwnedProjects(user.id);
-      setProjects(projects);
-      if (projects.length > 0) setSelectedProjectId(projects[0].id);
-    };
-    getProjects();
+    async function fetchProjectsAndInvites() {
+      setLoading(true);
+      // Fetch projects where user is a member
+      const { data: memberProjects } = await supabase
+        .from('project_members')
+        .select('project_id, projects(name, logo_url, owner_id)')
+        .eq('user_id', user.id);
+
+      setMyProjects(memberProjects ?? []);
+
+      // Fetch pending invites
+      const { data: invites } = await supabase
+        .from('project_invitations')
+        .select('project_id, projects(name, logo_url)')
+        .eq('user_id', user.id);
+
+      setPendingInvites(invites ?? []);
+      setLoading(false);
+    }
+    if (user) fetchProjectsAndInvites();
   }, [user]);
 
-  useEffect(() => {
-    const fetchProjectDetails = async () => {
-      // Only fetch if selectedProjectId is valid and exists in projects
-      if (!selectedProjectId || !projects.find(p => p.id === selectedProjectId)) {
-        setProjectDetails(null);
-        return;
-      }
-      const { data } = await supabase
-        .from('projects')
-        .select('id, name, logo_url, target_valuation, work_hours_until_completion, owner_id')
-        .eq('id', selectedProjectId)
-        .single();
-      setProjectDetails({...data} as ProjectDetails);
-      setForm(data ?? null);
-    };
-    fetchProjectDetails();
-  }, [selectedProjectId, editMode, projects]);
-
-  const handleEdit = () => {
-    setEditMode(true);
-    setForm(projectDetails);
+  const handleLeaveProject = async (projectId: string) => {
+    await supabase
+      .from('project_members')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('project_id', projectId);
+    setMyProjects(myProjects.filter(p => p.project_id !== projectId));
+    // Optionally: toast.success('Left project!');
   };
 
-  const handleCancel = () => {
-    setEditMode(false);
-    setForm(projectDetails);
+  const handleTransferOwnership = (projectId: string) => {
+    // Navigate to a transfer ownership page or open a modal
+    navigate(`/projects/${projectId}/transfer-ownership`);
   };
 
-  const handleChange = (field: keyof ProjectDetails, value: any) => {
-    setForm(prev => prev ? { ...prev, [field]: value } : prev);
-  };
-
-  const handleSave = async () => {
-    if (!form) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from('projects')
-      .update({
-        name: form.name,
-        target_valuation: form.target_valuation,
-        work_hours_until_completion: form.work_hours_until_completion,
-      })
-      .eq('id', form.id);
-    setSaving(false);
-    setEditMode(false);
-    // Refresh details
-    setProjectDetails(form);
-  };
-
-  const handleProjectionSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const success = await upsert(projectionForm);
-    if (success) {
-      setEditMode(false);
-      setProjectionForm(0);
-    }
+  const handleJoinProject = async (projectId: string) => {
+    await supabase
+      .from('project_members')
+      .insert([{ project_id: projectId, user_id: user.id }]);
+    setPendingInvites(pendingInvites.filter(i => i.project_id !== projectId));
+    // Optionally: toast.success('Joined project!');
   };
 
   return (
-    <Box sx={{ padding: 2 }}>
+    <Box sx={{ padding: 2, maxWidth: 700, mx: 'auto' }}>
       <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3}}>
-        <Typography variant="h4">Project Settings</Typography>
-        <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
-          <Button
-            onClick={() => navigate('/dashboard')}
-            variant="outlined"
-          >
-            Dashboard
-          </Button>
-        </Box>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>My Projects</Typography>
+        <Button
+          variant="outlined"
+          onClick={() => navigate('/dashboard')}
+        >
+          Dashboard
+        </Button>
       </Box>
-      <Select
-        value={selectedProjectId}
-        onChange={e => setSelectedProjectId(e.target.value as string)}
-        sx={{
-          minWidth: 180,
-          height: '40px',
-          mb: 2,
-          '& .MuiSelect-select': {
-            paddingTop: '10px',
-            paddingBottom: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            height: '40px',
-          }
-        }}
-        displayEmpty
-        inputProps={{ 'aria-label': 'Project' }}
-        renderValue={selected => {
-          if (!selected) {
-            return <span style={{ color: '#888' }}>Select a project</span>;
-          }
-          const project = projects.find(p => p.id === selected);
-          return project ? project.name : '';
-        }}
-      >
-        {projects.map(project => (
-          <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
-        ))}
-      </Select>
-
-      {projectDetails && !editMode && (
-        <Box sx={{ mt: 2, mb: 2 }}>
-          <Typography variant="subtitle1"><strong>Name:</strong> {projectDetails.name}</Typography>
-          <Typography variant="body2"><strong>Target Valuation:</strong> {projectDetails.target_valuation ?? '-'}</Typography>
-          <Typography variant="body2"><strong>Work Hours Until Completion:</strong> {projectDetails.work_hours_until_completion ?? '-'}</Typography>
-          {isOwner && (
-            <Button sx={{ mt: 2 }} variant="contained" onClick={handleEdit}>Edit Projection</Button>
-          )}
+      <Divider sx={{ mb: 3 }} />
+      {loading ? (
+        <Box>
+          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
+          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
+          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
         </Box>
-      )}
-
-      {projectDetails && editMode && isOwner && (
-        <Box sx={{ mt: 2, mb: 2 }}>
-          <form onSubmit={handleProjectionSubmit}>
-            <TextField
-              label="Work Hours Until Completion"
-              type="number"
-              value={form?.work_hours_until_completion ?? ''}
-              onChange={e => handleChange('work_hours_until_completion', Number(e.target.value))}
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-            {projectionError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {projectionError}
-              </Alert>
+      ) : (
+        <>
+          <List>
+            {myProjects.length === 0 && (
+              <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                You are not a member of any projects.
+              </Typography>
             )}
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button variant="contained" color="primary" type="submit" disabled={projectionLoading}>
-                {projectionLoading ? 'Saving...' : 'Save Projection'}
-              </Button>
-              <Button variant="outlined" onClick={handleCancel}>Cancel</Button>
-            </Box>
-          </form>
-        </Box>
+            {myProjects.map(p => (
+              <Paper key={p.project_id} elevation={2} sx={{ borderRadius: 2 }}>
+                <ListItem>
+                  <Avatar src={p.projects.logo_url} sx={{ width: 48, height: 48, mr: 2 }}>
+                    {p.projects.name?.[0] ?? '?'}
+                  </Avatar>
+                  <ListItemText
+                    primary={
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        {p.projects.name}
+                        {p.projects.owner_id === user.id && (
+                          <Chip label="Owner" color="primary" size="small" sx={{ ml: 2 }} />
+                        )}
+                      </Typography>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    {p.projects.owner_id === user.id ? (
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<SwapHorizIcon />}
+                        onClick={() => handleTransferOwnership(p.project_id)}
+                        sx={{ }}
+                      />
+                    ) : (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<ExitToAppIcon />}
+                        onClick={() => handleLeaveProject(p.project_id)}
+                      >
+                        Leave Project
+                      </Button>
+                    )}
+                  </ListItemSecondaryAction>
+                </ListItem>
+              </Paper>
+            ))}
+          </List>
+          <Divider sx={{ my: 4 }} />
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+            <GroupAddIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Pending Invites
+          </Typography>
+          <List>
+            {pendingInvites.length === 0 && (
+              <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                No pending invitations.
+              </Typography>
+            )}
+            {pendingInvites.map(invite => (
+              <Paper key={invite.project_id} elevation={1} sx={{ mb: 2, p: 2, borderRadius: 2 }}>
+                <ListItem
+                  secondaryAction={
+                    <Button
+                      variant="contained"
+                      onClick={() => handleJoinProject(invite.project_id)}
+                    >
+                      Join Project
+                    </Button>
+                  }
+                >
+                  <Avatar
+                    src={invite.projects.logo_url}
+                    sx={{ width: 48, height: 48, bgcolor: 'primary.light', mr: 2 }}
+                  >
+                    {invite.projects.name?.[0] ?? '?'}
+                  </Avatar>
+                  <ListItemText
+                    primary={
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        {invite.projects.name}
+                      </Typography>
+                    }
+                    secondary="You've been invited to join this project."
+                  />
+                </ListItem>
+              </Paper>
+            ))}
+          </List>
+          <Box sx={{textAlign: 'center'}}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate('/add-project')}
+            >
+              New Project
+            </Button>
+          </Box>
+        </>
       )}
-
-      <Typography variant="h4" sx={{ mt: 4, mb: 2 }}>User Settings</Typography>
-      <Box>
+      <Divider sx={{ my: 4 }} />
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h4" sx={{ mt: 2, mb: 2 }}>Profile</Typography>
         <Typography>Signed in as {user.email}</Typography>
-        <Button onClick={signOut} variant="outlined" color="error" sx={{ mt: 2 }}>Sign Out</Button>
+        <Button onClick={signOut} variant="outlined" color="error" sx={{ mt: 2 }}>
+          Sign Out
+        </Button>
       </Box>
     </Box>
   );

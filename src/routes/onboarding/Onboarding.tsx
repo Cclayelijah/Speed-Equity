@@ -49,7 +49,7 @@ const Onboarding = () => {
   return (
     <Fade in>
       <Box sx={{
-        maxWidth: 500,
+        maxWidth: 700,
         mx: 'auto',
         mt: 6,
         p: 3,

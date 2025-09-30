@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Button, TextField, Typography, List, ListItem } from '@mui/material';
+import { Button, TextField, Typography, List, ListItem, Box } from '@mui/material';
 
 const GithubConnect = () => {
   const [repoFullName, setRepoFullName] = useState('');
@@ -40,7 +40,7 @@ const GithubConnect = () => {
   }, []);
 
   return (
-    <div>
+    <Box sx={{ padding: 2, maxWidth: 700, mx: 'auto' }}>
       <Typography variant="h4">GitHub Integration</Typography>
       <TextField
         label="Repository Full Name"
@@ -67,7 +67,7 @@ const GithubConnect = () => {
           </ListItem>
         ))}
       </List>
-    </div>
+    </Box>
   );
 };
 
