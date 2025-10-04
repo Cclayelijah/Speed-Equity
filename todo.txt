@@ -1,0 +1,14 @@
+- Make / a sweet looking landing page that helps users understand immediately what this website does and why they would want to use it. 
+  - It should be the only route that is unprotected.
+  - It should have clean Hero section, cinematic scroll sections, and other impressive design components. 
+  - It should have a login button at the top right menu, or "View Dashboard" and "My Profile" if the user is logged in.
+  - It should have a "Get Started" CTA somewhere probably in the hero section.
+  - Should include a link to the github project somewhere on the page.
+- Fix Routing so / is not protected and keep onboarding at /onboarding
+
+
+Dashboard:
+- Find out why check-in data is not being read.
+
+New Project:
+- Make sure logo url uploaded doesn't have double segment: "project-logos/project-logos".
