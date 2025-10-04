@@ -6,7 +6,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemButton, // ADD THIS
+  ListItemButton,
   Avatar,
   Paper,
   Chip,
@@ -30,36 +30,26 @@ import type { Database } from '../../types/supabase';
 const RotateIconButton = styled(IconButton)(({ theme }) => ({
   transition: theme.transitions.create('transform', { duration: 200 }),
   '&.expanded': { transform: 'rotate(90deg)' },
-  // Enhance visibility
   color: theme.palette.mode === 'dark'
     ? theme.palette.grey[200]
     : theme.palette.grey[700],
   backgroundColor: theme.palette.action.hover,
-  '&:hover': {
-    backgroundColor: theme.palette.action.selected,
-  },
-  '& svg': {
-    fontSize: 26,
-  },
+  '&:hover': { backgroundColor: theme.palette.action.selected },
+  '& svg': { fontSize: 26 },
 }));
 
-// Constants
 const LOGO_BUCKET = 'project-logos';
 const MAX_LOGO_SIZE = 5 * 1024 * 1024;
 const NAME_DEBOUNCE_MS = 600;
 
-// Helpers
 const logoKeyFrom = (projectId: string, file: { name: string }) => {
   const ext = (file.name.split('.').pop() || 'png').toLowerCase();
-  return `${projectId}.${ext}`; // root-level, no folder duplication
+  return `${projectId}.${ext}`;
 };
 
-const stripDuplicateBucketSegment = (url: string | null | undefined) => {
-  if (!url) return url;
-  return url.replace(/\/public\/project-logos\/project-logos\//g, '/public/project-logos/');
-};
+const normalizeLogoUrl = (url: string | null | undefined) =>
+  url?.replace(/\/public\/project-logos\/project-logos\//g, '/public/project-logos/') ?? url ?? '';
 
-// Stronger typing
 type ProjectRow = Database['public']['Tables']['projects']['Row'];
 type MemberRow = Database['public']['Tables']['project_members']['Row'] & {
   projects: Pick<ProjectRow, 'name' | 'logo_url' | 'owner_id'>;
@@ -68,60 +58,12 @@ type InviteRow = Database['public']['Tables']['project_invitations']['Row'] & {
   projects: Pick<ProjectRow, 'name' | 'logo_url'>;
 };
 
-// Utility
 const isNumber = (v: unknown) => typeof v === 'number' && !isNaN(v);
-
-// Debug helper function
-async function debugStorageEnvironment() {
-  console.log('[StorageDebug] begin');
-  // Try list root of bucket (works if SELECT policy allows)
-  const { data: listed, error: listErr } = await supabase.storage
-    .from(LOGO_BUCKET)
-    .list('', { limit: 5 });
-  if (listErr) {
-    console.warn('[StorageDebug] list error (likely policy or bucket truly missing):', listErr);
-  } else {
-    console.log('[StorageDebug] list success (bucket exists & policy OK). First keys:', listed);
-  }
-
-  // Probe a fake object to see error shape
-  const probeName = '__probe_does_not_exist__.txt';
-  const { data: probePub } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(probeName);
-  console.log('[StorageDebug] getPublicUrl pattern:', probePub);
-
-  console.log('[StorageDebug] end');
-}
-
-async function verifyLogoObject(bucket: string, key: string) {
-  console.log('[LogoVerify] start', { bucket, key });
-
-  // 1. List root (or prefix) to confirm exact stored key
-  const { data: rootList, error: rootErr } = await supabase.storage.from(bucket).list('', { limit: 100 });
-  console.log('[LogoVerify] list root ->', { error: rootErr, keys: rootList?.map(o => o.name) });
-
-  const prefix = key.split('.').shift() || '';
-  const { data: prefixList, error: prefixErr } = await supabase.storage.from(bucket).list('', { search: prefix });
-  console.log('[LogoVerify] list search prefix ->', { prefix, error: prefixErr, keys: prefixList?.map(o => o.name) });
-
-  // 2. Attempt direct download (will fail with 401/403 if private or policy issue)
-  const { data: downloadBlob, error: downloadErr } = await supabase.storage.from(bucket).download(key);
-  console.log('[LogoVerify] download result ->', { ok: !!downloadBlob, size: downloadBlob?.size, error: downloadErr });
-
-  // 3. Log public URL HEAD check (cannot use fetch without CORS sometimes, but try)
-  const publicUrl = `https://${supabase.supabaseUrl.replace(/^https?:\/\//,'')}/storage/v1/object/public/${bucket}/${key}`;
-  try {
-    const headResp = await fetch(publicUrl, { method: 'HEAD' });
-    console.log('[LogoVerify] HEAD public URL ->', publicUrl, headResp.status, headResp.statusText);
-  } catch (e) {
-    console.warn('[LogoVerify] HEAD fetch failed', e);
-  }
-
-  console.log('[LogoVerify] end');
-}
 
 const Settings = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
   const [myProjects, setMyProjects] = useState<MemberRow[]>([]);
   const [pendingInvites, setPendingInvites] = useState<InviteRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,37 +74,30 @@ const Settings = () => {
   const [editHours, setEditHours] = useState<Record<string, string>>({});
 
   const [logoUploading, setLogoUploading] = useState(false);
-
-  // Per-field sync state
   const [nameSyncing, setNameSyncing] = useState<Record<string, boolean>>({});
   const [projectionSyncing, setProjectionSyncing] = useState<Record<string, boolean>>({});
   const [projectionStatus, setProjectionStatus] = useState<Record<string, 'idle' | 'pending' | 'saved' | 'error'>>({});
   const [projectionDirty, setProjectionDirty] = useState<Record<string, boolean>>({});
-  const [nameFocused, setNameFocused] = useState<Record<string, boolean>>({}); // ADD THIS
+  const [nameFocused, setNameFocused] = useState<Record<string, boolean>>({});
 
-  // Debounce timers
   const nameTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // Centralized error toast
   const toastError = useCallback((err: unknown, fallback = 'Unexpected error') => {
     const msg = (err as any)?.message || fallback;
     toast.error(msg);
   }, []);
 
-  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       Object.values(nameTimers.current).forEach(t => clearTimeout(t));
     };
   }, []);
 
-  // Memo of project ownership for quick lookup
   const ownershipMap = useMemo(
     () => new Map(myProjects.map(p => [p.project_id, p.projects.owner_id === user?.id] as const)),
     [myProjects, user?.id]
   );
 
-  // Refetch logic extracted
   const fetchProjectsAndInvites = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -179,7 +114,12 @@ const Settings = () => {
       ]);
     if (mErr) toastError(mErr);
     if (iErr) toastError(iErr);
-    setMyProjects(memberProjects ?? []);
+    setMyProjects(
+      (memberProjects ?? []).map(m => ({
+        ...m,
+        projects: { ...m.projects, logo_url: normalizeLogoUrl(m.projects.logo_url) },
+      }))
+    );
     setPendingInvites(invites ?? []);
     setLoading(false);
   }, [user, toastError]);
@@ -188,11 +128,8 @@ const Settings = () => {
     fetchProjectsAndInvites();
   }, [fetchProjectsAndInvites]);
 
-  // Toggle expand (unchanged logic + small guard)
   const toggleExpand = useCallback(async (projectId: string, proj: MemberRow) => {
     const opening = expandedProjectId !== projectId;
-
-    // If collapsing the currently open project: remove its focus state & exit
     if (!opening) {
       setExpandedProjectId(null);
       setNameFocused(prev => {
@@ -203,11 +140,8 @@ const Settings = () => {
       });
       return;
     }
-
-    // Switching/opening: clear all prior focus flags
     setNameFocused({});
     setExpandedProjectId(projectId);
-
     setEditName(prev => ({ ...prev, [projectId]: proj.projects.name || '' }));
     setProjectionStatus(prev => ({ ...prev, [projectId]: 'idle' }));
     setEditValuation(prev => ({ ...prev, [projectId]: '' }));
@@ -231,15 +165,12 @@ const Settings = () => {
       }));
       setProjectionDirty(prev => ({ ...prev, [projectId]: false }));
     }
-
-    console.log('[ToggleExpand] projectId:', projectId, 'current logo_url:', proj.projects.logo_url);
   }, [expandedProjectId, supabase]);
 
-  // Debounced project name save (skip if unchanged)
   const scheduleNameSave = useCallback((projectId: string, value: string, owned: boolean) => {
     if (!owned) return;
     const current = myProjects.find(p => p.project_id === projectId)?.projects.name || '';
-    if (current === value) return; // avoid unnecessary call
+    if (current === value) return;
     if (nameTimers.current[projectId]) clearTimeout(nameTimers.current[projectId]);
     setNameSyncing(prev => ({ ...prev, [projectId]: true }));
     nameTimers.current[projectId] = setTimeout(async () => {
@@ -256,7 +187,6 @@ const Settings = () => {
     }, NAME_DEBOUNCE_MS);
   }, [myProjects, toastError]);
 
-  // Logo upload improvements: guard unchanged file & early exits
   const handleLogoUpload = useCallback((projectId: string, owner: boolean) => {
     if (!owner) return;
     const input = document.createElement('input');
@@ -268,17 +198,9 @@ const Settings = () => {
       if (file.size === 0) return toast.error('File empty.');
       if (file.size > MAX_LOGO_SIZE) return toast.error('Image too large (>5MB).');
       setLogoUploading(true);
+
       const objectName = logoKeyFrom(projectId, file);
-      console.log('[LogoUpload] sanitized objectName:', objectName);
-
-      // Extra guard in case someone passed a prefixed path accidentally
-      const safeObjectName = objectName
-        .replace(/^\/+/, '')                // no leading slash
-        .replace(/^project-logos\//, '');   // remove accidental bucket duplication
-
-      if (safeObjectName !== objectName) {
-        console.warn('[LogoUpload] objectName adjusted to remove duplication:', safeObjectName);
-      }
+      const safeObjectName = objectName.replace(/^\/+/, '').replace(/^project-logos\//, '');
 
       const { error: upErr } = await supabase.storage
         .from(LOGO_BUCKET)
@@ -294,50 +216,47 @@ const Settings = () => {
         return;
       }
 
-      await verifyLogoObject(LOGO_BUCKET, safeObjectName);
-
-      // REPLACE the block that builds logo_url from getPublicUrl with the enhanced fallback:
-
-      const expectedPublic = `https://${supabase.supabaseUrl.replace(/^https?:\/\//,'')}/storage/v1/object/public/${LOGO_BUCKET}/${safeObjectName}`;
-      console.log('[LogoUpload] expected public URL:', expectedPublic);
-
       const { data: pub } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(safeObjectName);
-      console.log('[LogoUpload] getPublicUrl raw:', pub);
+      let logo_url = pub?.publicUrl || null;
 
-      let logo_url = pub?.publicUrl ? `${stripDuplicateBucketSegment(pub.publicUrl)}?v=${Date.now()}` : null;
-
-      if (!logo_url) {
-        console.warn('[LogoUpload] public URL missing (bucket likely private). Trying signed URL fallback.');
-        const { data: signed, error: signedErr } = await supabase.storage
-          .from(LOGO_BUCKET)
-          .createSignedUrl(safeObjectName, 60 * 60 * 24 * 7); // 7 days
-        console.log('[LogoUpload] signedUrl attempt:', signed, signedErr);
-        if (signed?.signedUrl) {
-            logo_url = `${stripDuplicateBucketSegment(signed.signedUrl)}&v=${Date.now()}`;
+      if (logo_url) {
+        // Optionally verify accessibility (omit if bucket guaranteed public)
+        try {
+          const head = await fetch(logo_url, { method: 'HEAD' });
+          if (head.status !== 200) logo_url = null;
+        } catch {
+          logo_url = null;
         }
       }
 
       if (!logo_url) {
-        toast.error('Could not resolve logo URL (bucket not public & no signed URL).');
+        // Signed fallback (30 days)
+        const { data: signed } = await supabase.storage
+          .from(LOGO_BUCKET)
+          .createSignedUrl(safeObjectName, 60 * 60 * 24 * 30);
+        logo_url = signed?.signedUrl || null;
+      }
+
+      if (!logo_url) {
+        toast.error('Could not resolve logo URL.');
         setLogoUploading(false);
         return;
       }
 
-      // Inside handleLogoUpload just before updating DB:
-      logo_url = logo_url.replace(/\/public\/project-logos\/project-logos\//g, '/public/project-logos/');
+      logo_url = normalizeLogoUrl(`${logo_url}${logo_url.includes('?') ? '&' : '?'}v=${Date.now()}`);
 
       const { error: updErr } = await supabase.from('projects').update({ logo_url }).eq('id', projectId);
-      if (updErr) toastError(updErr, 'Failed updating project');
-      else {
+      if (updErr) {
+        toastError(updErr, 'Failed updating project');
+      } else {
         setMyProjects(prev =>
-          prev.map(p =>
-            p.project_id === projectId
-              ? { ...p, projects: { ...p.projects, logo_url } }
-              : p
-          )
+            prev.map(p =>
+              p.project_id === projectId
+                ? { ...p, projects: { ...p.projects, logo_url } }
+                : p
+            )
         );
         toast.success('Logo updated');
-        console.log('[LogoUpload] state updated. Project new logo_url:', logo_url);
       }
       setLogoUploading(false);
     };
@@ -366,7 +285,6 @@ const Settings = () => {
     toast.success('Joined project');
   };
 
-  // ADD the saveProjection callback (place below scheduleNameSave or near other callbacks)
   const saveProjection = useCallback(async (projectId: string, owned: boolean) => {
     if (!owned) return;
 
@@ -384,7 +302,7 @@ const Settings = () => {
       hours < 0
     ) {
       setProjectionStatus(prev => ({ ...prev, [projectId]: 'error' }));
-      toast.error('Enter valid non‑negative numbers for both fields');
+      toast.error('Enter valid numbers');
       return;
     }
 
@@ -409,10 +327,6 @@ const Settings = () => {
     }
     setProjectionSyncing(prev => ({ ...prev, [projectId]: false }));
   }, [editValuation, editHours, supabase, toastError]);
-
-  useEffect(() => {
-    debugStorageEnvironment();
-  }, []);
 
   return (
     <Box sx={{ padding: 2, maxWidth: 700, mx: 'auto', pb: 6 }}>
@@ -444,46 +358,51 @@ const Settings = () => {
               const projProjectionState = projectionStatus[projId] || 'idle';
               return (
                 <Paper key={projId} elevation={2} sx={{ borderRadius: 2, mb: 2 }}>
-                  <ListItem
-                    disablePadding
-                    sx={{ pr: 6 }}
-                    secondaryAction={
+                  <ListItem disablePadding>
+                    <ListItemButton
+                      onClick={() => toggleExpand(projId, p)}
+                      sx={{
+                        cursor: 'pointer',
+                        alignItems: 'center',
+                        py: 1.25,
+                        px: 2,
+                        display: 'flex',
+                        gap: 2,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          flexGrow: 1,
+                          minWidth: 0,
+                          gap: 2,
+                        }}
+                      >
+                        <Avatar
+                          src={normalizeLogoUrl(p.projects.logo_url) || undefined}
+                          sx={{ width: 48, height: 48 }}
+                        >
+                          {p.projects.name?.[0] ?? '?'}
+                        </Avatar>
+                        <ListItemText
+                          primary={
+                            <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                              {p.projects.name}
+                              {owned && <Chip label="Owner" color="primary" size="small" sx={{ ml: 1 }} />}
+                            </Typography>
+                          }
+                        />
+                      </Box>
                       <RotateIconButton
                         edge="end"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleExpand(projId, p);
-                        }}
                         className={expanded ? 'expanded' : ''}
                         aria-label={expanded ? 'Collapse project' : 'Expand project'}
                         size="small"
+                        // no stopPropagation so hover/click area is unified
                       >
                         <ExpandMoreIcon />
                       </RotateIconButton>
-                    }
-                  >
-                    <ListItemButton
-                      onClick={() => toggleExpand(projId, p)}
-                      sx={{ cursor: 'pointer', alignItems: 'flex-start', py: 1.25, px: 2 }}
-                    >
-                      <Avatar
-                        src={stripDuplicateBucketSegment(p.projects.logo_url) || undefined}
-                        sx={{ width: 48, height: 48, mr: 2 }}
-                        imgProps={{
-                          onLoad: () => console.log('[Avatar] LOAD OK list ->', stripDuplicateBucketSegment(p.projects.logo_url)),
-                          onError: () => console.warn('[Avatar] LOAD FAIL list ->', stripDuplicateBucketSegment(p.projects.logo_url)),
-                        }}
-                      >
-                        {p.projects.name?.[0] ?? '?'}
-                      </Avatar>
-                      <ListItemText
-                        primary={
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            {p.projects.name}
-                            {owned && <Chip label="Owner" color="primary" size="small" sx={{ ml: 1 }} />}
-                          </Typography>
-                        }
-                      />
                     </ListItemButton>
                   </ListItem>
                   <Collapse in={expanded} timeout="auto" unmountOnExit>
@@ -500,12 +419,8 @@ const Settings = () => {
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Avatar
-                            src={stripDuplicateBucketSegment(p.projects.logo_url) || undefined}
+                            src={normalizeLogoUrl(p.projects.logo_url) || undefined}
                             sx={{ width: 72, height: 72 }}
-                            imgProps={{
-                              onLoad: () => console.log('[Avatar] LOAD OK expanded ->', stripDuplicateBucketSegment(p.projects.logo_url)),
-                              onError: () => console.warn('[Avatar] LOAD FAIL expanded ->', stripDuplicateBucketSegment(p.projects.logo_url)),
-                            }}
                           >
                             {p.projects.name?.[0] ?? '?'}
                           </Avatar>
@@ -591,7 +506,6 @@ const Settings = () => {
                         />
                       </Box>
 
-                      {/* Save Projection Button */}
                       {owned && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Button
@@ -660,7 +574,7 @@ const Settings = () => {
                   }
                 >
                   <Avatar
-                    src={invite.projects.logo_url}
+                    src={normalizeLogoUrl(invite.projects.logo_url) || undefined}
                     sx={{ width: 48, height: 48, bgcolor: 'primary.light', mr: 2 }}
                   >
                     {invite.projects.name?.[0] ?? '?'}
