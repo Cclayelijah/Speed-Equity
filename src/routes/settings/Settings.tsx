@@ -1,192 +1,616 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Typography, TextField, Button, Select, MenuItem } from '@mui/material';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemButton,
+  Avatar,
+  Paper,
+  Chip,
+  Divider,
+  Skeleton,
+  Collapse,
+  TextField,
+  IconButton,
+} from '@mui/material';
 import { useAuth } from '../../components/AuthProvider';
 import { supabase } from '../../lib/supabase';
-import { fetchOwnedProjects } from '../../lib/projectHelpers';
 import { useNavigate } from 'react-router-dom';
+import AddIcon from '@mui/icons-material/Add';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import toast from 'react-hot-toast';
+import { styled } from '@mui/material/styles';
+import type { Database } from '../../types/supabase';
 
-type ProjectDetails = {
-  id: string;
-  name: string;
-  target_valuation?: number;
-  weeks_to_goal?: number;
-  logo_url?: string;
+const RotateIconButton = styled(IconButton)(({ theme }) => ({
+  transition: theme.transitions.create('transform', { duration: 200 }),
+  '&.expanded': { transform: 'rotate(90deg)' },
+  color: theme.palette.mode === 'dark'
+    ? theme.palette.grey[200]
+    : theme.palette.grey[700],
+  backgroundColor: theme.palette.action.hover,
+  '&:hover': { backgroundColor: theme.palette.action.selected },
+  '& svg': { fontSize: 26 },
+}));
+
+const LOGO_BUCKET = 'project-logos';
+const MAX_LOGO_SIZE = 5 * 1024 * 1024;
+const NAME_DEBOUNCE_MS = 600;
+
+const logoKeyFrom = (projectId: string, file: { name: string }) => {
+  const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+  return `${projectId}.${ext}`;
 };
 
+const normalizeLogoUrl = (url: string | null | undefined) =>
+  url?.replace(/\/public\/project-logos\/project-logos\//g, '/public/project-logos/') ?? url ?? '';
+
+type ProjectRow = Database['public']['Tables']['projects']['Row'];
+type MemberRow = Database['public']['Tables']['project_members']['Row'] & {
+  projects: Pick<ProjectRow, 'name' | 'logo_url' | 'owner_id'>;
+};
+type InviteRow = Database['public']['Tables']['project_invitations']['Row'] & {
+  projects: Pick<ProjectRow, 'name' | 'logo_url'>;
+};
+
+const isNumber = (v: unknown) => typeof v === 'number' && !isNaN(v);
+
 const Settings = () => {
-  const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const [projects, setProjects] = useState<ProjectDetails[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
-  const [editMode, setEditMode] = useState(false);
-  const [form, setForm] = useState<ProjectDetails | null>(null);
-  const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
+
+  const [myProjects, setMyProjects] = useState<MemberRow[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<InviteRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
+
+  const [editName, setEditName] = useState<Record<string, string>>({});
+  const [editValuation, setEditValuation] = useState<Record<string, string>>({});
+  const [editHours, setEditHours] = useState<Record<string, string>>({});
+
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [nameSyncing, setNameSyncing] = useState<Record<string, boolean>>({});
+  const [projectionSyncing, setProjectionSyncing] = useState<Record<string, boolean>>({});
+  const [projectionStatus, setProjectionStatus] = useState<Record<string, 'idle' | 'pending' | 'saved' | 'error'>>({});
+  const [projectionDirty, setProjectionDirty] = useState<Record<string, boolean>>({});
+  const [nameFocused, setNameFocused] = useState<Record<string, boolean>>({});
+
+  const nameTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const toastError = useCallback((err: unknown, fallback = 'Unexpected error') => {
+    const msg = (err as any)?.message || fallback;
+    toast.error(msg);
+  }, []);
 
   useEffect(() => {
-    const getProjects = async () => {
-      if (!user) return;
-      const projects = await fetchOwnedProjects(user.id);
-      setProjects(projects);
-      if (projects.length > 0) setSelectedProjectId(projects[0].id);
+    return () => {
+      Object.values(nameTimers.current).forEach(t => clearTimeout(t));
     };
-    getProjects();
-  }, [user]);
+  }, []);
+
+  const ownershipMap = useMemo(
+    () => new Map(myProjects.map(p => [p.project_id, p.projects.owner_id === user?.id] as const)),
+    [myProjects, user?.id]
+  );
+
+  const fetchProjectsAndInvites = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    const [{ data: memberProjects, error: mErr }, { data: invites, error: iErr }] =
+      await Promise.all([
+        supabase
+          .from('project_members')
+          .select('project_id, projects(name, logo_url, owner_id)')
+          .eq('user_id', user.id),
+        supabase
+          .from('project_invitations')
+          .select('project_id, projects(name, logo_url)')
+          .eq('user_id', user.id),
+      ]);
+    if (mErr) toastError(mErr);
+    if (iErr) toastError(iErr);
+    setMyProjects(
+      (memberProjects ?? []).map(m => ({
+        ...m,
+        projects: { ...m.projects, logo_url: normalizeLogoUrl(m.projects.logo_url) },
+      }))
+    );
+    setPendingInvites(invites ?? []);
+    setLoading(false);
+  }, [user, toastError]);
 
   useEffect(() => {
-    const fetchProjectDetails = async () => {
-      // Only fetch if selectedProjectId is valid and exists in projects
-      if (!selectedProjectId || !projects.find(p => p.id === selectedProjectId)) {
-        setProjectDetails(null);
+    fetchProjectsAndInvites();
+  }, [fetchProjectsAndInvites]);
+
+  const toggleExpand = useCallback(async (projectId: string, proj: MemberRow) => {
+    const opening = expandedProjectId !== projectId;
+    if (!opening) {
+      setExpandedProjectId(null);
+      setNameFocused(prev => {
+        if (!prev[projectId]) return prev;
+        const next = { ...prev };
+        delete next[projectId];
+        return next;
+      });
+      return;
+    }
+    setNameFocused({});
+    setExpandedProjectId(projectId);
+    setEditName(prev => ({ ...prev, [projectId]: proj.projects.name || '' }));
+    setProjectionStatus(prev => ({ ...prev, [projectId]: 'idle' }));
+    setEditValuation(prev => ({ ...prev, [projectId]: '' }));
+    setEditHours(prev => ({ ...prev, [projectId]: '' }));
+
+    const { data: projection, error } = await supabase
+      .from('project_projections')
+      .select('valuation, work_hours_until_completion')
+      .eq('project_id', projectId)
+      .order('effective_from', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && projection) {
+      setEditValuation(p => ({ ...p, [projectId]: projection.valuation != null ? String(projection.valuation) : '' }));
+      setEditHours(p => ({
+        ...p,
+        [projectId]: projection.work_hours_until_completion != null
+          ? String(projection.work_hours_until_completion)
+          : '',
+      }));
+      setProjectionDirty(prev => ({ ...prev, [projectId]: false }));
+    }
+  }, [expandedProjectId, supabase]);
+
+  const scheduleNameSave = useCallback((projectId: string, value: string, owned: boolean) => {
+    if (!owned) return;
+    const current = myProjects.find(p => p.project_id === projectId)?.projects.name || '';
+    if (current === value) return;
+    if (nameTimers.current[projectId]) clearTimeout(nameTimers.current[projectId]);
+    setNameSyncing(prev => ({ ...prev, [projectId]: true }));
+    nameTimers.current[projectId] = setTimeout(async () => {
+      const { error } = await supabase.from('projects').update({ name: value }).eq('id', projectId);
+      if (error) toastError(error, 'Failed saving name');
+      else {
+        setMyProjects(prev =>
+          prev.map(p =>
+            p.project_id === projectId ? { ...p, projects: { ...p.projects, name: value } } : p
+          )
+        );
+      }
+      setNameSyncing(prev => ({ ...prev, [projectId]: false }));
+    }, NAME_DEBOUNCE_MS);
+  }, [myProjects, toastError]);
+
+  const handleLogoUpload = useCallback((projectId: string, owner: boolean) => {
+    if (!owner) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size === 0) return toast.error('File empty.');
+      if (file.size > MAX_LOGO_SIZE) return toast.error('Image too large (>5MB).');
+      setLogoUploading(true);
+
+      const objectName = logoKeyFrom(projectId, file);
+      const safeObjectName = objectName.replace(/^\/+/, '').replace(/^project-logos\//, '');
+
+      const { error: upErr } = await supabase.storage
+        .from(LOGO_BUCKET)
+        .upload(safeObjectName, file, {
+          upsert: true,
+          contentType: file.type || 'image/png',
+          cacheControl: '3600',
+        });
+
+      if (upErr) {
+        toastError(upErr, 'Upload failed');
+        setLogoUploading(false);
         return;
       }
-      const { data } = await supabase
-        .from('projects')
-        .select('id, name, logo_url, planned_hours_per_week, target_valuation, weeks_to_goal')
-        .eq('id', selectedProjectId)
-        .single();
-      setProjectDetails({...data} as ProjectDetails);
-      setForm(data ?? null);
+
+      const { data: pub } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(safeObjectName);
+      let logo_url = pub?.publicUrl || null;
+
+      if (logo_url) {
+        // Optionally verify accessibility (omit if bucket guaranteed public)
+        try {
+          const head = await fetch(logo_url, { method: 'HEAD' });
+          if (head.status !== 200) logo_url = null;
+        } catch {
+          logo_url = null;
+        }
+      }
+
+      if (!logo_url) {
+        // Signed fallback (30 days)
+        const { data: signed } = await supabase.storage
+          .from(LOGO_BUCKET)
+          .createSignedUrl(safeObjectName, 60 * 60 * 24 * 30);
+        logo_url = signed?.signedUrl || null;
+      }
+
+      if (!logo_url) {
+        toast.error('Could not resolve logo URL.');
+        setLogoUploading(false);
+        return;
+      }
+
+      logo_url = normalizeLogoUrl(`${logo_url}${logo_url.includes('?') ? '&' : '?'}v=${Date.now()}`);
+
+      const { error: updErr } = await supabase.from('projects').update({ logo_url }).eq('id', projectId);
+      if (updErr) {
+        toastError(updErr, 'Failed updating project');
+      } else {
+        setMyProjects(prev =>
+            prev.map(p =>
+              p.project_id === projectId
+                ? { ...p, projects: { ...p.projects, logo_url } }
+                : p
+            )
+        );
+        toast.success('Logo updated');
+      }
+      setLogoUploading(false);
     };
-    fetchProjectDetails();
-  }, [selectedProjectId, editMode, projects]);
+    input.click();
+  }, [toastError]);
 
-  const handleEdit = () => {
-    setEditMode(true);
-    setForm(projectDetails);
+  const handleLeaveProject = async (projectId: string) => {
+    await supabase
+      .from('project_members')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('project_id', projectId);
+    setMyProjects(prev => prev.filter(p => p.project_id !== projectId));
+    toast.success('Left project');
   };
 
-  const handleCancel = () => {
-    setEditMode(false);
-    setForm(projectDetails);
+  const handleTransferOwnership = (projectId: string) => {
+    navigate(`/projects/${projectId}/transfer-ownership`);
   };
 
-  const handleChange = (field: keyof ProjectDetails, value: any) => {
-    setForm(prev => prev ? { ...prev, [field]: value } : prev);
+  const handleJoinProject = async (projectId: string) => {
+    await supabase
+      .from('project_members')
+      .insert([{ project_id: projectId, user_id: user.id, email: user.email }]);
+    setPendingInvites(prev => prev.filter(i => i.project_id !== projectId));
+    toast.success('Joined project');
   };
 
-  const handleSave = async () => {
-    if (!form) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from('projects')
-      .update({
-        name: form.name,
-        planned_hours_per_week: form.planned_hours_per_week,
-        target_valuation: form.target_valuation,
-        weeks_to_goal: form.weeks_to_goal,
-      })
-      .eq('id', form.id);
-    setSaving(false);
-    setEditMode(false);
-    // Refresh details
-    setProjectDetails(form);
-  };
+  const saveProjection = useCallback(async (projectId: string, owned: boolean) => {
+    if (!owned) return;
+
+    const valStr = editValuation[projectId];
+    const hrsStr = editHours[projectId];
+    const valuation = valStr === '' ? null : Number(valStr);
+    const hours = hrsStr === '' ? null : Number(hrsStr);
+
+    if (
+      valuation == null ||
+      hours == null ||
+      !isNumber(valuation) ||
+      !isNumber(hours) ||
+      valuation < 0 ||
+      hours < 0
+    ) {
+      setProjectionStatus(prev => ({ ...prev, [projectId]: 'error' }));
+      toast.error('Enter valid numbers');
+      return;
+    }
+
+    setProjectionSyncing(prev => ({ ...prev, [projectId]: true }));
+    setProjectionStatus(prev => ({ ...prev, [projectId]: 'pending' }));
+
+    const { error } = await supabase.rpc('set_active_projection', {
+      p_project_id: projectId,
+      p_valuation: valuation,
+      p_work_hours_until_completion: hours,
+      p_effective_from: new Date().toISOString().slice(0, 10),
+      p_projection_id: null,
+    });
+
+    if (error) {
+      toastError(error, 'Projection save failed');
+      setProjectionStatus(prev => ({ ...prev, [projectId]: 'error' }));
+    } else {
+      setProjectionStatus(prev => ({ ...prev, [projectId]: 'saved' }));
+      setProjectionDirty(prev => ({ ...prev, [projectId]: false }));
+      toast.success('Projection saved');
+    }
+    setProjectionSyncing(prev => ({ ...prev, [projectId]: false }));
+  }, [editValuation, editHours, supabase, toastError]);
 
   return (
-    <Box sx={{ padding: 2 }}>
+    <Box sx={{ padding: 2, maxWidth: 700, mx: 'auto', pb: 6 }}>
       <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3}}>
-        <Typography variant="h4">Project Settings</Typography>
-        <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
-          <Button
-            onClick={() => navigate('/dashboard')}
-            variant="outlined"
-          >
-            Dashboard
-          </Button>
-        </Box>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>My Projects</Typography>
+        <Button variant="outlined" onClick={() => navigate('/dashboard')}>
+          Dashboard
+        </Button>
       </Box>
-      <Select
-        value={selectedProjectId}
-        onChange={e => setSelectedProjectId(e.target.value as string)}
-        sx={{
-          minWidth: 180,
-          height: '40px',
-          mb: 2,
-          '& .MuiSelect-select': {
-            paddingTop: '10px',
-            paddingBottom: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            height: '40px',
-          }
-        }}
-        displayEmpty
-        inputProps={{ 'aria-label': 'Project' }}
-        renderValue={selected => {
-          if (!selected) {
-            return <span style={{ color: '#888' }}>Select a project</span>;
-          }
-          const project = projects.find(p => p.id === selected);
-          return project ? project.name : '';
-        }}
-      >
-        {projects.map(project => (
-          <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
-        ))}
-      </Select>
+      <Divider sx={{ mb: 3 }} />
 
-      {projectDetails && !editMode && (
-        <Box sx={{ mt: 2, mb: 2 }}>
-          <Typography variant="subtitle1"><strong>Name:</strong> {projectDetails.name}</Typography>
-          <Typography variant="body2"><strong>Target Valuation:</strong> {projectDetails.target_valuation ?? '-'}</Typography>
-          <Typography variant="body2"><strong>Weeks to Goal:</strong> {projectDetails.weeks_to_goal ?? '-'}</Typography>
-          <Button sx={{ mt: 2 }} variant="contained" onClick={handleEdit}>Edit</Button>
+      {loading ? (
+        <Box>
+          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
+          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
         </Box>
-      )}
+      ) : (
+        <>
+          <List>
+            {myProjects.length === 0 && (
+              <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                You are not a member of any projects.
+              </Typography>
+            )}
+            {myProjects.map(p => {
+              const owned = ownershipMap.get(p.project_id) === true;
+              const expanded = expandedProjectId === p.project_id;
+              const projId = p.project_id;
+              const projProjectionState = projectionStatus[projId] || 'idle';
+              return (
+                <Paper key={projId} elevation={2} sx={{ borderRadius: 2, mb: 2 }}>
+                  <ListItem disablePadding>
+                    <ListItemButton
+                      onClick={() => toggleExpand(projId, p)}
+                      sx={{
+                        cursor: 'pointer',
+                        alignItems: 'center',
+                        py: 1.25,
+                        px: 2,
+                        display: 'flex',
+                        gap: 2,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          flexGrow: 1,
+                          minWidth: 0,
+                          gap: 2,
+                        }}
+                      >
+                        <Avatar
+                          src={normalizeLogoUrl(p.projects.logo_url) || undefined}
+                          sx={{ width: 48, height: 48 }}
+                        >
+                          {p.projects.name?.[0] ?? '?'}
+                        </Avatar>
+                        <ListItemText
+                          primary={
+                            <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                              {p.projects.name}
+                              {owned && <Chip label="Owner" color="primary" size="small" sx={{ ml: 1 }} />}
+                            </Typography>
+                          }
+                        />
+                      </Box>
+                      <RotateIconButton
+                        edge="end"
+                        className={expanded ? 'expanded' : ''}
+                        aria-label={expanded ? 'Collapse project' : 'Expand project'}
+                        size="small"
+                        // no stopPropagation so hover/click area is unified
+                      >
+                        <ExpandMoreIcon />
+                      </RotateIconButton>
+                    </ListItemButton>
+                  </ListItem>
+                  <Collapse in={expanded} timeout="auto" unmountOnExit>
+                    <Divider />
+                    <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: 2,
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Avatar
+                            src={normalizeLogoUrl(p.projects.logo_url) || undefined}
+                            sx={{ width: 72, height: 72 }}
+                          >
+                            {p.projects.name?.[0] ?? '?'}
+                          </Avatar>
+                          <Button
+                            startIcon={<PhotoCameraIcon />}
+                            variant="outlined"
+                            size="small"
+                            disabled={!owned || logoUploading}
+                            onClick={() => handleLogoUpload(projId, owned)}
+                          >
+                            {logoUploading ? 'Uploading...' : 'Change Logo'}
+                          </Button>
+                        </Box>
+                        {owned && (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="warning"
+                            onClick={() => handleTransferOwnership(projId)}
+                            sx={{ ml: 'auto' }}
+                          >
+                            Transfer Ownership
+                          </Button>
+                        )}
+                      </Box>
 
-      {projectDetails && editMode && (
-        <Box sx={{ mt: 2, mb: 2 }}>
-          <TextField
-            label="Name"
-            value={form?.name ?? ''}
-            onChange={e => handleChange('name', e.target.value)}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Planned Hours/Week"
-            type="number"
-            value={form?.planned_hours_per_week ?? ''}
-            onChange={e => handleChange('planned_hours_per_week', Number(e.target.value))}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Target Valuation"
-            type="number"
-            value={form?.target_valuation ?? ''}
-            onChange={e => handleChange('target_valuation', Number(e.target.value))}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Weeks to Goal"
-            type="number"
-            value={form?.weeks_to_goal ?? ''}
-            onChange={e => handleChange('weeks_to_goal', Number(e.target.value))}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            <strong>Implied Hour Value:</strong>{' '}
-            {form?.target_valuation && form?.planned_hours_per_week && form?.weeks_to_goal
-              ? ((form.target_valuation) / (form.planned_hours_per_week * form.weeks_to_goal)).toFixed(2)
-              : '-'}
+                      <TextField
+                        label="Project Name"
+                        size="small"
+                        value={editName[projId] ?? ''}
+                        disabled={!owned}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setEditName(prev => ({ ...prev, [projId]: val }));
+                        }}
+                        onFocus={() => {
+                          if (owned) setNameFocused(prev => ({ ...prev, [projId]: true }));
+                        }}
+                        onBlur={() => {
+                          const val = editName[projId] ?? '';
+                          scheduleNameSave(projId, val, owned);
+                          setNameFocused(prev => ({ ...prev, [projId]: false }));
+                        }}
+                        fullWidth
+                        helperText={
+                          !owned
+                            ? 'Read-only'
+                            : nameSyncing[projId]
+                              ? 'Saving...'
+                              : nameFocused[projId]
+                                ? 'Click off to save'
+                                : 'Up to date'
+                        }
+                      />
+                      <Divider sx={{ my: 1 }} />
+
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        <TextField
+                          label="Active Valuation (USD)"
+                          size="small"
+                          type="number"
+                          disabled={!owned}
+                          value={editValuation[projId] ?? ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEditValuation(prev => ({ ...prev, [projId]: val }));
+                            if (owned) setProjectionDirty(prev => ({ ...prev, [projId]: true }));
+                          }}
+                          sx={{ flex: 1, minWidth: 200 }}
+                        />
+                        <TextField
+                          label="Work Hours Remaining"
+                          size="small"
+                          type="number"
+                          disabled={!owned}
+                          value={editHours[projId] ?? ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEditHours(prev => ({ ...prev, [projId]: val }));
+                            if (owned) setProjectionDirty(prev => ({ ...prev, [projId]: true }));
+                          }}
+                          sx={{ flex: 1, minWidth: 200 }}
+                        />
+                      </Box>
+
+                      {owned && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            disabled={
+                              projectionSyncing[projId] ||
+                              !projectionDirty[projId] ||
+                              !editValuation[projId] ||
+                              !editHours[projId]
+                            }
+                            onClick={() => saveProjection(projId, owned)}
+                          >
+                            {projectionSyncing[projId] ? 'Saving...' : 'Save Projection'}
+                          </Button>
+                          <Typography variant="caption" color="text.secondary">
+                            {projectionDirty[projId]
+                              ? 'Click save to persist changes'
+                              : projProjectionState === 'saved'
+                                ? 'Projection up to date'
+                                : ''}
+                          </Typography>
+                        </Box>
+                      )}
+
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {!owned && (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="error"
+                            onClick={() => handleLeaveProject(projId)}
+                          >
+                            Leave Project
+                          </Button>
+                        )}
+                      </Box>
+                    </Box>
+                  </Collapse>
+                </Paper>
+              );
+            })}
+          </List>
+
+          <Divider sx={{ my: 4 }} />
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+            <GroupAddIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Pending Invites
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" color="primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save'}
+          <List>
+            {pendingInvites.length === 0 && (
+              <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                No pending invitations.
+              </Typography>
+            )}
+            {pendingInvites.map(invite => (
+              <Paper key={invite.project_id} elevation={1} sx={{ mb: 2, p: 2, borderRadius: 2 }}>
+                <ListItem
+                  secondaryAction={
+                    <Button
+                      variant="contained"
+                      onClick={() => handleJoinProject(invite.project_id)}
+                    >
+                      Join Project
+                    </Button>
+                  }
+                >
+                  <Avatar
+                    src={normalizeLogoUrl(invite.projects.logo_url) || undefined}
+                    sx={{ width: 48, height: 48, bgcolor: 'primary.light', mr: 2 }}
+                  >
+                    {invite.projects.name?.[0] ?? '?'}
+                  </Avatar>
+                  <ListItemText
+                    primary={
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        {invite.projects.name}
+                      </Typography>
+                    }
+                    secondary="You've been invited to join this project."
+                  />
+                </ListItem>
+              </Paper>
+            ))}
+          </List>
+
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate('/add-project')}
+            >
+              New Project
             </Button>
-            <Button variant="outlined" onClick={handleCancel}>Cancel</Button>
           </Box>
-        </Box>
+        </>
       )}
 
-      <Typography variant="h4" sx={{ mt: 4, mb: 2 }}>User Settings</Typography>
-      <Box>
+      <Divider sx={{ my: 4 }} />
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h4" sx={{ mt: 2, mb: 2 }}>Profile</Typography>
         <Typography>Signed in as {user.email}</Typography>
-        <Button onClick={signOut} variant="outlined" color="error" sx={{ mt: 2 }}>Sign Out</Button>
+        <Button onClick={signOut} variant="outlined" color="error" sx={{ mt: 2 }}>
+          Sign Out
+        </Button>
       </Box>
     </Box>
   );

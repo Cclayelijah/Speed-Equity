@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Box, Button, TextField, Typography, Select, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, Button, TextField, Typography, Select, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Skeleton } from '@mui/material';
 import { useAuth } from '../../components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
 import { fetchUserProjects } from '../../lib/projectHelpers'; // <-- import the helper
 
+
+interface UserProjects {
+  id: string;
+  name: string;
+}
+
 const DailyCheckInPage: React.FC = () => {
-  const [projects, setProjects] = useState<{ id: string; name: string; implied_hour_value?: number }[]>([]);
+  const [projects, setProjects] = useState<UserProjects[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [hoursWorked, setHoursWorked] = useState('');
   const [completed, setCompleted] = useState('');
@@ -18,41 +24,44 @@ const DailyCheckInPage: React.FC = () => {
   const [moneyMade, setMoneyMade] = useState<number>(0);
   const [moneyLost, setMoneyLost] = useState<number>(0);
   const [recentCheckin, setRecentCheckin] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProjectsAndCheckin = async () => {
-      if (!user) return;
+      if (!user) {
+        navigate('/login');
+        return;
+      }
 
-      // Use the helper to get all projects for the user
-      const uniqueProjects = await fetchUserProjects(user.id);
+      const userProjects = await fetchUserProjects(user.id);
+      setProjects(userProjects);
 
-      setProjects(uniqueProjects);
-      if (uniqueProjects.length > 0) setSelectedProjectId(uniqueProjects[0].id);
-
-      // Check for recent check-in (within last 10 hours)
-      if (uniqueProjects.length > 0) {
+      if (userProjects && userProjects.length > 0) {
+        const projectId = userProjects[0].id ?? '';
+        setSelectedProjectId(projectId);
         const { data: recentEntries } = await supabase
           .from('daily_entries')
-          .select('created_at')
+          .select('entry_date')
           .eq('created_by', user.id)
-          .eq('project_id', uniqueProjects[0].id)
-          .order('created_at', { ascending: false })
+          .eq('project_id', projectId)
+          .order('entry_date', { ascending: false })
           .limit(1);
 
         if (
           recentEntries &&
           recentEntries.length > 0 &&
-          recentEntries[0].created_at
+          recentEntries[0].entry_date
         ) {
-          const lastCheckin = new Date(recentEntries[0].created_at).getTime();
+          const lastCheckin = new Date(recentEntries[0].entry_date).getTime();
           const now = Date.now();
           const hoursSince = (now - lastCheckin) / (1000 * 60 * 60);
           setRecentCheckin(hoursSince < 10);
         }
       }
+      setInitialLoading(false); // <-- done loading
     };
     fetchProjectsAndCheckin();
   }, [user]);
@@ -77,12 +86,20 @@ const DailyCheckInPage: React.FC = () => {
     const entryDate = new Date().toISOString().slice(0, 10);
 
     // Find implied_hour_value for selected project
-    const project = projects.find(p => p.id === selectedProjectId);
-    // Fallback calculation if implied_hour_value is not present
+    // Find implied_hour_value for selected project from project_dashboard view
+    const { data: dashboardData, error: dashboardError } = await supabase
+      .from('project_dashboard')
+      .select('implied_hour_value, active_work_hours_until_completion, active_valuation')
+      .eq('project_id', selectedProjectId)
+      .single();
+
+    const project = dashboardData;
     let impliedHourValue = project?.implied_hour_value;
+
+    // Fallback calculation if implied_hour_value is not present
     if (impliedHourValue === undefined && project) {
-      const totalPlannedHours = (project.weeks_to_goal ?? 1) * (project.planned_hours_per_week ?? 1);
-      impliedHourValue = totalPlannedHours > 0 ? (project.target_valuation ?? 0) / totalPlannedHours : 0;
+      const totalPlannedHours = project.active_work_hours_until_completion ?? 1;
+      impliedHourValue = totalPlannedHours > 0 ? (project.active_valuation ?? 0) / totalPlannedHours : 0;
     }
 
     const worked = Number(hoursWorked) || 0;
@@ -119,8 +136,31 @@ const DailyCheckInPage: React.FC = () => {
     navigate('/dashboard');
   };
 
+  // Add a loading skeleton for the form
+  if (initialLoading) {
+    return (
+      <Box sx={{ padding: 2, maxWidth: 700, mx: 'auto' }}>
+        <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3}}>
+          <Typography variant="h4">Daily Check In</Typography>
+          <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
+            <Skeleton variant="rectangular" width={120} height={40} sx={{ borderRadius: 2 }} />
+          </Box>
+        </Box>
+        <Box sx={{ maxWidth: 500, mx: 'auto', mt: 4 }}>
+          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
+          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
+          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
+          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <CircularProgress color="primary" />
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ padding: 2 }}>
+    <Box sx={{ padding: 2, maxWidth: 700, mx: 'auto' }}>
       <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3}}>
         <Typography variant="h4">Daily Check In</Typography>
         <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
@@ -147,6 +187,7 @@ const DailyCheckInPage: React.FC = () => {
             const project = projects.find(p => p.id === selected);
             return project ? project.name : '';
           }}
+          disabled={recentCheckin}
         >
           {projects.map(project => (
             <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
@@ -163,6 +204,7 @@ const DailyCheckInPage: React.FC = () => {
           fullWidth
           required
           sx={{ mb: 2 }}
+          disabled={recentCheckin}
         />
         <TextField
           label="What did you achieve during that time?"
@@ -172,6 +214,7 @@ const DailyCheckInPage: React.FC = () => {
           multiline
           required
           sx={{ mb: 2 }}
+          disabled={recentCheckin}
         />
         <TextField
           label="How many hours did you waste yesterday?"
@@ -181,6 +224,7 @@ const DailyCheckInPage: React.FC = () => {
           fullWidth
           required
           sx={{ mb: 2 }}
+          disabled={recentCheckin}
         />
         <TextField
           label="What are you going to do today?"
@@ -190,6 +234,7 @@ const DailyCheckInPage: React.FC = () => {
           multiline
           required
           sx={{ mb: 2 }}
+          disabled={recentCheckin}
         />
         <Button
           type="submit"
@@ -212,7 +257,7 @@ const DailyCheckInPage: React.FC = () => {
               <strong>Money Lost:</strong> ${moneyLost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </Typography>
             <Typography sx={{ mt: 2 }}>
-              Based on your check-in, this is your sweat equity breakdown for today.
+              Based on your check-in, this is your sweat equity breakdown for yesterday.
             </Typography>
           </DialogContent>
           <DialogActions>

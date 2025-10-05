@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../components/AuthProvider';
 import { Box, Button, TextField, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 const AuthPage: React.FC = () => {
+  const router = useNavigate()
   const { user, loading, signIn, signOut } = useAuth();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
@@ -14,14 +16,7 @@ const AuthPage: React.FC = () => {
   };
 
   if (loading) return <Typography>Loading...</Typography>;
-  if (user) return (
-    <Box>
-      <Typography sx={{ mb: 3 }}>Signed in as {user.email}</Typography>
-      <Button onClick={signOut} variant="contained" sx={{ mt: 2 }}>
-        Sign Out
-      </Button>
-    </Box>
-  );
+  if (user) router('/dashboard');
 
   return (
     <Box component="form" onSubmit={handleSignIn} sx={{ maxWidth: 400, mx: 'auto', mt: 4 }}>

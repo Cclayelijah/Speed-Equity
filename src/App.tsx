@@ -8,6 +8,7 @@ import Settings from './routes/settings/Settings';
 import GithubConnect from './routes/integrations/GithubConnect';
 import DailyCheckInPage from './routes/checkin/DailyCheckInPage';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Button } from '@mui/material';
+import AddProject from './routes/add-project/AddProject';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -17,14 +18,19 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 const App: React.FC = () => (
-  <AuthProvider>
     <Routes>
-      <Route path="/auth" element={<AuthPage />} />
-      <Route path="/" element={
+      <Route path="/onboarding" element={
         <ProtectedRoute>
           <Onboarding />
         </ProtectedRoute>
       } />
+      <Route path="/add-project" element={
+        <ProtectedRoute>
+          {/* Pass ownerId from authenticated user */}
+          <AddProject ownerId={useAuth().user?.id ?? ''} />
+        </ProtectedRoute>
+      } />
+      <Route path="/auth" element={<AuthPage />} />
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <Dashboard />
@@ -46,7 +52,6 @@ const App: React.FC = () => (
         </ProtectedRoute>
       } />
     </Routes>
-  </AuthProvider>
 );
 
 export default App;
