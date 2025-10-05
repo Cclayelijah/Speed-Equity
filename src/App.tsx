@@ -10,6 +10,7 @@ import DailyCheckInPage from './routes/checkin/DailyCheckInPage';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Button } from '@mui/material';
 import AddProject from './routes/add-project/AddProject';
 import Checkins from './routes/checkins/Checkins';
+import LandingPage from './routes/landing/Landing';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -20,6 +21,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 const App: React.FC = () => (
   <Routes>
+    <Route path="/" element={
+      <LandingPage />
+    } />
     <Route path="/onboarding" element={
       <ProtectedRoute>
         <Onboarding />

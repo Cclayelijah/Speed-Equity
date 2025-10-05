@@ -6,6 +6,7 @@ import App from './App';
 import { theme } from './theme';
 import { supabase } from './lib/supabase';
 import { AuthProvider } from './components/AuthProvider';
+import "./index.css";
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 

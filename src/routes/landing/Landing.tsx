@@ -1,0 +1,605 @@
+import { useEffect, useMemo, useRef, useState } from "react"
+import { motion, useScroll, useTransform, useSpring, useReducedMotion } from "framer-motion"
+import { Rocket, Gauge, Coins, Users, GitBranch, Sparkles, Github, ExternalLink, PlayCircle, ArrowRight, LogIn, LayoutGrid, ChevronDown } from "lucide-react"
+import { useAuth } from "../../components/AuthProvider"  // <-- real auth hook
+import "../../index.css";
+import heroGraphic from "../../assets/hero-section-transparent-generated-image.png";
+
+/**
+ * Sweaty.dev — Cinematic Landing Page
+ * -------------------------------------------------------------
+ * - Single-file React component designed for Next.js/Vite.
+ * - TailwindCSS required. (Add the classes to your Tailwind config.)
+ * - Uses framer-motion for buttery scroll/hover animations.
+ * - Transparent nav that solidifies on scroll.
+ * - Hero with WOW-factor background and CTA.
+ * - Sticky, cinematic scroll story section.
+ * - Feature grid, contribution heatmap, social proof, FAQ, footer.
+ * - Wire up real auth by toggling `isLoggedIn` via your auth state.
+ * - Drop in Canva imagery where noted (hero, badges, device frames, etc.).
+ */
+
+export default function LandingPage() {
+  // Real auth integration
+  const { user, loading } = useAuth();
+  const isLoggedIn = !!user;
+
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12)
+    onScroll()
+    window.addEventListener("scroll", onScroll)
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
+  return (
+    <div className="min-h-screen w-full bg-[#05060A] text-white selection:bg-white/10 selection:text-white">
+      <BackgroundFX />
+      <ButtonCSS /> {/* Mount the hook-using component properly */}
+      <Nav scrolled={scrolled} isLoggedIn={isLoggedIn} loadingAuth={loading} />
+      <Hero isLoggedIn={isLoggedIn} />
+      <CinematicStory />
+      <Features />
+      <Heatmap />
+      <SocialProof />
+      <CTASection />
+      <FAQ />
+      <Footer />
+    </div>
+  )
+}
+
+/** NAVBAR */
+function Nav({ scrolled, isLoggedIn, loadingAuth }: { scrolled: boolean; isLoggedIn: boolean; loadingAuth: boolean }) {
+  return (
+    <div
+      className={`
+        fixed top-0 left-0 right-0 z-50
+        transition-colors duration-300
+        border-b
+        ${scrolled
+          ? "bg-[#05060A]/85 backdrop-blur-md border-white/10"
+          : "bg-[#05060A]/0 border-transparent"}
+      `}
+      style={{
+        willChange: 'background-color',
+        WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none'
+      }}
+    >
+      <div className="mx-auto max-w-7xl px-5 h-16 flex items-center justify-between">
+         <a href="#top" className="group inline-flex items-center gap-2">
+           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-fuchsia-500 to-cyan-400 shadow-[0_0_40px_-8px] shadow-fuchsia-500/40 grid place-items-center">
+             <Sparkles className="h-4 w-4" />
+           </div>
+           <span className="text-lg font-semibold tracking-tight">
+             sweaty<span className="text-fuchsia-400">.dev</span>
+           </span>
+         </a>
+         <div className="hidden md:flex items-center gap-7 text-sm/none">
+           <a href="#story" className="nav-link">Why Sweaty</a>
+           <a href="#features" className="nav-link">Features</a>
+           <a href="#heatmap" className="nav-link">Progress</a>
+           <a href="#faq" className="nav-link">FAQ</a>
+           <a
+             href="https://github.com/Cclayelijah/Speed-Equity"
+             target="_blank"
+             rel="noreferrer"
+             className="inline-flex items-center gap-1 nav-link"
+           >
+             <Github className="h-4 w-4" /> GitHub
+           </a>
+         </div>
+         <div className="flex items-center gap-2">
+           {loadingAuth ? (
+             <span className="badge-soft">Checking session…</span>
+           ) : isLoggedIn ? (
+             <>
+              <a href="/dashboard" className="btn btn-primary subtle-shadow hidden sm:inline-flex"><LayoutGrid className="h-4 w-4" /> Dashboard</a>
+              <a href="/profile" className="btn btn-glass hidden sm:inline-flex">Profile</a>
+              <a href="/auth?signout=1" className="btn btn-outline inline-flex">Log out</a>
+             </>
+           ) : (
+             <>
+              <a href="/onboarding" className="btn btn-primary hidden sm:inline-flex">Get Started</a>
+              <a href="/auth" className="btn btn-outline inline-flex"><LogIn className="h-4 w-4" /> Login</a>
+             </>
+           )}
+         </div>
+       </div>
+     </div>
+   )
+}
+
+/** HERO */
+function Hero({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const container = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+  }
+  const item = { hidden: { y: 10, opacity: 0 }, show: { y: 0, opacity: 1, transition: { type: "spring" as const, stiffness: 80 } } }
+
+  return (
+    <section id="top" className="relative pt-28 md:pt-36 pb-24 md:pb-40 overflow-hidden">
+      {/* Hero BG Orbs (drop Canva render here if desired) */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-24 -left-16 h-[32rem] w-[32rem] rounded-full bg-fuchsia-500/20 blur-[120px]" />
+        <div className="absolute top-20 -right-24 h-[28rem] w-[28rem] rounded-full bg-cyan-400/20 blur-[120px]" />
+        <Noise />
+      </div>
+
+      <div className="mx-auto max-w-7xl px-5 grid md:grid-cols-2 gap-10 items-center">
+        <motion.div variants={container} initial="hidden" animate="show" className="relative z-10">
+          <motion.h1 variants={item} className="text-5xl md:text-6xl font-black tracking-tight leading-tight">
+            Build <span className="bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-400 via-rose-300 to-cyan-300">Sweat Equity</span>.
+            <br/>Get <span className="underline decoration-cyan-400/60 decoration-4 underline-offset-8">Funded</span>.
+          </motion.h1>
+          <motion.p variants={item} className="mt-6 text-lg md:text-xl text-white/80 max-w-xl">
+            Sweaty.dev motivates software teams to ship. Document your journey, track who did what, and show investors momentum—so your startup can go from idea to <em>inevitable</em>.
+          </motion.p>
+          <motion.div variants={item} className="mt-8 flex flex-wrap items-center gap-3">
+            <a id="get-started" href={isLoggedIn ? "/dashboard" : "/onboarding"} className="btn primary text-base inline-flex gap-2">
+              {isLoggedIn ? "Open Dashboard" : "Get Started"} <ArrowRight className="h-4 w-4"/>
+            </a>
+            <a href="https://github.com/Cclayelijah/Speed-Equity" target="_blank" rel="noreferrer" className="btn muted text-base inline-flex gap-2">
+              <Github className="h-4 w-4"/> Star on GitHub
+            </a>
+            <a href="#story" className="btn ghost text-base inline-flex gap-2"><PlayCircle className="h-4 w-4"/> How it works</a>
+          </motion.div>
+
+          <motion.div variants={item} className="mt-10 flex items-center gap-4 opacity-90">
+            <Badge>For Startups & OSS Teams</Badge>
+            <Badge>Silicon Valley Ready</Badge>
+            <Badge>Investor Friendly</Badge>
+          </motion.div>
+        </motion.div>
+
+        {/* Device mock — replace with Canva export for extra WOW */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="relative"
+        >
+          {/* Canva drop‑in image */}
+          <div className="relative">
+            <img
+              src={heroGraphic}
+              alt="Sweaty.dev product hero"
+              className="w-full h-auto object-contain select-none pointer-events-none drop-shadow-[0_10px_35px_rgba(0,0,0,0.55)]"
+              draggable={false}
+            />
+            {/* Optional subtle gradient overlay for contrast */}
+            <div className="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-tr from-fuchsia-500/10 via-transparent to-cyan-400/10 mix-blend-screen" />
+          </div>
+
+          {/* Fallback (kept for future / can remove if not needed) */}
+          <div className="sr-only">
+            <div className="backdrop-blur-xl bg-white/5 rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+              <div className="p-6 text-sm text-white/70">
+                Fallback metrics mock if hero image not loaded.
+              </div>
+            </div>
+          </div>
+
+          <div className="pointer-events-none absolute -right-6 -bottom-6 hidden md:block">
+            <Glow size={240} />
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+/** CINEMATIC STORY — sticky narrative */
+function CinematicStory() {
+  const ref = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] })
+  const smooth = useSpring(scrollYProgress, { stiffness: 70, damping: 18, mass: 0.4 })
+  const reduce = useReducedMotion();
+  const y1 = useTransform(reduce ? scrollYProgress.map(()=>0) : smooth, [0,1],[0,-90])
+  const y2 = useTransform(smooth, [0, 1], [0, -160])
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.1])
+
+  return (
+    <section id="story" ref={ref} className="relative">
+      <div className="sticky top-0 h-screen overflow-hidden">
+        {/* Parallax backdrops */}
+        <motion.div style={{ y: y1, scale }} className="absolute inset-0 -z-10 opacity-[0.35]">
+          <GridBackdrop />
+        </motion.div>
+        <motion.div style={{ y: y2 }} className="absolute inset-0 -z-10">
+          <GradientBackdrop />
+        </motion.div>
+
+        <div className="mx-auto max-w-5xl h-full px-5 grid place-items-center">
+          <div className="space-y-16">
+            <StoryCard
+              icon={<Rocket className="h-6 w-6"/>}
+              title="Document the journey"
+              body="Turn commits, PRs, chats and demo clips into a living story investors can skim in minutes."
+              tag="Narrative"
+            />
+            <StoryCard
+              icon={<Users className="h-6 w-6"/>}
+              title="Track real contributions"
+              body="Attribute work precisely. Celebrate output, not politics. Let data speak for the team."
+              tag="Attribution"
+            />
+            <StoryCard
+              icon={<Coins className="h-6 w-6"/>}
+              title="Maximise motivation"
+              body="Watch your sweat convert to equity projections in real time. See the money you’re leaving on the table when you procrastinate."
+              tag="Motivation"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** FEATURES */
+function Features() {
+  const items = [
+    { icon: <Gauge className="h-5 w-5"/>, title: "Momentum Dashboard", body: "Weekly velocity, burn, and ship cadence — distilled for investors and teammates."},
+    { icon: <GitBranch className="h-5 w-5"/>, title: "Git-native Signals", body: "Auto-pull commits, PRs, issues from GitHub/GitLab with zero fuss."},
+    { icon: <Users className="h-5 w-5"/>, title: "Contributor Ledger", body: "Fair attribution by repo, task, and week. See who’s carrying, who’s stuck."},
+    { icon: <Coins className="h-5 w-5"/>, title: "Sweat → Equity Model", body: "Map activity to projected valuation based on your runway + goals."},
+  ]
+
+  return (
+    <section id="features" className="relative py-24 md:py-36">
+      <div className="mx-auto max-w-7xl px-5">
+        <div className="max-w-3xl">
+          <h2 className="text-3xl md:text-5xl font-black tracking-tight">Everything you need to <span className="text-cyan-300">ship</span> and get <span className="text-fuchsia-300">funded</span>.</h2>
+          <p className="mt-4 text-white/80">Designed for Silicon Valley speed. Built for remote teams. Loved by founders who sweat the craft.</p>
+        </div>
+
+        <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {items.map((it, i) => (
+            <motion.div key={i} whileHover={{ y: -6 }} className="group rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
+              <div className="h-10 w-10 rounded-xl grid place-items-center bg-white/5 border border-white/10">
+                {it.icon}
+              </div>
+              <h3 className="mt-4 font-semibold">{it.title}</h3>
+              <p className="mt-2 text-sm text-white/75">{it.body}</p>
+              <div className="mt-4 text-xs text-white/60 inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                Learn more <ExternalLink className="h-3.5 w-3.5"/>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** SIMPLE HEATMAP (GitHub-style) */
+function Heatmap() {
+  // generate faux contribution data
+  const days = 7 * 12 // 12 weeks
+  const data = useMemo(() => Array.from({ length: days }, (_, i) => Math.floor(Math.sin(i/3) * 2 + Math.random()*4 + 2)), [days])
+  const max = Math.max(...data)
+
+  return (
+    <section id="heatmap" className="relative py-24 md:py-28">
+      <div className="mx-auto max-w-7xl px-5">
+        <div className="flex items-end justify-between gap-6 flex-wrap">
+          <div>
+            <h2 className="text-2xl md:text-4xl font-black tracking-tight">Make progress impossible to ignore.</h2>
+            <p className="mt-3 text-white/80 max-w-xl">Your public graph tells a story. Show consistent output and compounding effort. Investors love this view.</p>
+          </div>
+          <a href="/onboarding" className="btn primary">Start Tracking</a>
+        </div>
+
+        <div className="mt-8 rounded-2xl p-6 border border-white/10 bg-white/[0.03]">
+          <div className="grid grid-cols-[repeat(12,1fr)] gap-2">
+            {Array.from({ length: 12 }).map((_, col) => (
+              <div key={col} className="grid grid-rows-7 gap-2">
+                {Array.from({ length: 7 }).map((_, row) => {
+                  const idx = col*7 + row
+                  const val = data[idx]
+                  const intensity = val/max
+                  return (
+                    <motion.div
+                      key={idx}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      whileInView={{ scale: 1, opacity: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: idx*0.01 }}
+                      className="h-5 w-full rounded-md"
+                      style={{ background: `linear-gradient(135deg, rgba(236,72,153,${0.15+0.6*intensity}), rgba(34,211,238,${0.15+0.6*intensity}))` }}
+                      title={`${val} units`}
+                    />
+                  )
+                })}
+              </div>
+            ))}
+
+          </div>
+          <div className="mt-4 text-xs text-white/70">12 weeks of commits, PRs, docs, reviews, demos.</div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** SOCIAL PROOF */
+function SocialProof() {
+  const quotes = [
+    {
+      name: "Ivy — Founding Engineer",
+      quote: "This finally gave our team an honest scoreboard. The motivation loop is addictive.",
+    },
+    {
+      name: "Leo — OSS Maintainer",
+      quote: "Investors understood our momentum in 30 seconds. Fundraising calls changed overnight.",
+    },
+    {
+      name: "Maya — YC Founder",
+      quote: "We replaced status meetings with Sweaty. More building, less talking.",
+    },
+  ]
+
+  return (
+    <section className="relative py-24 md:py-32">
+      <div className="mx-auto max-w-6xl px-5">
+        <h2 className="text-center text-3xl md:text-5xl font-black tracking-tight">Loved by builders who ship.</h2>
+        <div className="mt-10 grid md:grid-cols-3 gap-5">
+          {quotes.map((q, i) => (
+            <motion.figure key={i} whileHover={{ y: -6 }} className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+              <blockquote className="text-white/85">“{q.quote}”</blockquote>
+              <figcaption className="mt-4 text-sm text-white/60">{q.name}</figcaption>
+            </motion.figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** CTA */
+function CTASection() {
+  return (
+    <section className="relative py-20">
+      <div className="mx-auto max-w-6xl px-5">
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-fuchsia-600/30 via-purple-600/20 to-cyan-500/20 p-10 text-center">
+          <Glow size={360} />
+          <h3 className="text-2xl md:text-4xl font-black tracking-tight">Ready to get sweaty?</h3>
+          <p className="mt-3 text-white/85">Turn your team’s effort into unmistakable momentum — then turn momentum into money.</p>
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <a href="/onboarding" className="btn primary text-base">Get Started</a>
+            <a href="/demo" className="btn ghost text-base">Watch Demo</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** FAQ */
+function FAQ() {
+  const faqs = [
+    { q: "Who is this for?", a: "Software startups, OSS teams, and ambitious solo builders who want to show progress and raise money." },
+    { q: "How do you track contributions?", a: "We ingest signals from Git, issues, reviews, docs and timeboxed goals, then attribute by person and repo." },
+    { q: "Can investors see my progress?", a: "Yes. Share a live read‑only dashboard link that updates automatically." },
+    { q: "What is the most important thing for any startup?", a: "Speed. The sweatier you get, the faster you go, dipshit!"}
+  ]
+
+  return (
+    <section id="faq" className="relative py-20">
+      <div className="mx-auto max-w-4xl px-5">
+        <h3 className="text-2xl md:text-4xl font-black tracking-tight">FAQs</h3>
+        <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03]">
+          {faqs.map((f, i) => (
+            <details
+              key={i}
+              className="group border-b border-white/10 last:border-b-0 px-6 py-4 open:bg-white/[0.02] transition-colors"
+            >
+              <summary
+                className="flex items-center justify-between gap-4 list-none cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/40 rounded-xl py-1"
+              >
+                <span className="font-medium text-white/90 group-open:text-white">
+                  {f.q}
+                </span>
+                <ChevronDown
+                  className="h-5 w-5 text-white/55 transition-transform duration-300 group-open:rotate-180 group-hover:text-white/80"
+                />
+              </summary>
+              <p className="mt-3 text-sm text-white/75 pr-1">
+                {f.a}
+              </p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** FOOTER */
+function Footer() {
+  return (
+    <footer className="relative border-t border-white/10 py-12">
+      <div className="mx-auto max-w-7xl px-5 flex flex-col md:flex-row items-center justify-between gap-6">
+        <a href="#top" className="inline-flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-fuchsia-500 to-cyan-400 grid place-items-center">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <span className="text-lg font-semibold tracking-tight">sweaty<span className="text-fuchsia-400">.dev</span></span>
+        </a>
+        <div className="text-sm text-white/70 flex items-center gap-4">
+          <a href="https://github.com/Cclayelijah/Speed-Equity" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-white">
+            <Github className="h-4 w-4"/> GitHub Project
+          </a>
+          <span className="opacity-50">•</span>
+          <a href="mailto:hello@sweaty.dev" className="hover:text-white">Contact</a>
+          <span className="opacity-50">•</span>
+          <a href="/privacy" className="hover:text-white">Privacy</a>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+/* ---------------------- UI Fragments ---------------------- */
+function Badge({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-xs text-white/80">
+      {children}
+    </span>
+  )
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+      <div className="text-xs text-white/60">{label}</div>
+      <div className="mt-1 text-xl font-bold">{value}</div>
+    </div>
+  )
+}
+
+function StoryCard({ icon, title, body, tag }: { icon: React.ReactNode; title: string; body: string; tag: string }) {
+  return (
+    <motion.div initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ type: "spring", stiffness: 80 }} className="grid md:grid-cols-[56px_1fr] gap-5 items-start">
+      <div className="h-14 w-14 rounded-2xl border border-white/10 bg-white/[0.06] grid place-items-center">{icon}</div>
+      <div>
+        <div className="text-xs text-white/60 mb-1">{tag}</div>
+        <h3 className="text-xl font-semibold">{title}</h3>
+        <p className="mt-1.5 text-white/75 max-w-2xl">{body}</p>
+      </div>
+    </motion.div>
+  )
+}
+
+function BackgroundFX() {
+  return (
+    <>
+      {/* subtle vignette */}
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(1200px_600px_at_50%_-10%,rgba(255,255,255,0.06),transparent)]" />
+      {/* starfield speckles */}
+      <div className="pointer-events-none fixed inset-0 -z-10 opacity-50" style={{ backgroundImage: "radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,.2), rgba(255,255,255,0)), radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,.2), rgba(255,255,255,0)), radial-gradient(1px 1px at 130px 90px, rgba(255,255,255,.2), rgba(255,255,255,0))"}} />
+    </>
+  )
+}
+
+function Noise() {
+  return <div className={`absolute inset-0 bg-[url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"120\" height=\"120\" viewBox=\"0 0 120 120\"><filter id=\"n\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.65\" numOctaves=\"2\" stitchTiles=\"stitch\"/></filter><rect width=\"100%\" height=\"100%\" filter=\"url(%23n)\" opacity=\"0.035\"/></svg>')]`} />
+}
+
+function Glow({ size = 260 }: { size?: number }) {
+  return (
+    <div style={{ width: size, height: size }} className="pointer-events-none absolute -z-10 rounded-full bg-gradient-to-tr from-fuchsia-400/30 via-rose-300/20 to-cyan-300/30 blur-3xl" />
+  )
+}
+
+function GridBackdrop() {
+  return (
+    <div className="absolute inset-0 opacity-60">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:80px_80px]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/60" />
+    </div>
+  )
+}
+
+function GradientBackdrop() {
+  return (
+    <div className="absolute inset-0 bg-[conic-gradient(at_30%_50%,rgba(236,72,153,0.22),rgba(34,211,238,0.22),transparent_60%)]" />
+  )
+}
+
+/* ---------------------- Buttons ---------------------- */
+const baseBtn = "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-white/30 active:scale-[.98]"
+
+function classnames(...c: (string | false | null | undefined)[]) {
+  return c.filter(Boolean).join(" ")
+}
+
+// Tailwind component classes
+const styles = {
+  primary: classnames(baseBtn, "bg-white text-black hover:bg-white/90"),
+  muted: classnames(baseBtn, "bg-white/10 text-white hover:bg-white/15 border border-white/10"),
+  ghost: classnames(baseBtn, "bg-transparent text-white hover:bg-white/10 border border-white/10"),
+}
+
+// utility classes for quick usage
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(globalThis as any).styles = styles
+
+// btn class helpers
+// @ts-ignore - make handy classes available on window for quick copy/paste
+if (typeof window !== "undefined") {
+  // @ts-ignore
+  window.styles = styles
+}
+
+// Compose class shortcuts for JSX
+// Usage: className="btn primary" or "btn muted"
+const css = `
+.btn{${baseBtn.replaceAll(" "," ")};position:relative;overflow:hidden;
+  border-radius:1.25rem; /* fallback if Tailwind classes not processed */
+  padding:.7rem 1.15rem; /* explicit padding for non-TW environments */
+}
+.btn:before{
+  content:"";position:absolute;inset:0;opacity:0;transition:.35s;
+  background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.25),transparent 60%);
+}
+.btn:hover:before{opacity:.8;}
+.btn:active{transform:translateY(1px);}
+.subtle-shadow{box-shadow:0 4px 18px -4px rgba(0,0,0,.45),0 2px 6px -2px rgba(0,0,0,.4);}
+
+.btn-primary{
+  background:linear-gradient(135deg,#ffffff,#e9e9e9);
+  color:#000;
+  box-shadow:0 4px 18px -4px rgba(255,255,255,.3),0 2px 10px -2px rgba(255,255,255,.25);
+}
+.btn-primary:hover{background:linear-gradient(135deg,#ffffff,#f3f3f3);}
+.btn-primary:active{background:linear-gradient(135deg,#f8f8f8,#e4e4e4);}
+
+.btn-glass{
+  background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.05));
+  color:#fff;
+  border:1px solid rgba(255,255,255,.15);
+  backdrop-filter:blur(12px);
+}
+.btn-glass:hover{background:linear-gradient(135deg,rgba(255,255,255,.28),rgba(255,255,255,.08));}
+
+.btn-outline{
+  background:rgba(255,255,255,0.06);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.18);
+}
+.btn-outline:hover{background:rgba(255,255,255,0.12);}
+
+.btn-ghost{
+  background:transparent;
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+}
+.btn-ghost:hover{background:rgba(255,255,255,.08);}
+
+.nav-link{opacity:.78;transition:.25s;color:#fff;}
+.nav-link:hover{opacity:1;}
+.badge-soft{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.15);
+  padding:.4rem .75rem;
+  border-radius:10px;
+  font-size:.65rem;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+}
+`
+
+// Inject quick button utility css (for environments where Tailwind plugin can't define component classes)
+function ButtonCSS() {
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.innerHTML = css
+    document.head.appendChild(style)
+    return () => { document.head.removeChild(style) }
+  }, [])
+  return null
+}
