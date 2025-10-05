@@ -1,9 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
-  ToggleButton,
-  ToggleButtonGroup,
   Avatar,
   Divider,
   Paper,
@@ -19,10 +17,13 @@ import {
   Grid,
   useMediaQuery,
   Button,
+  Tooltip,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PersonIcon from '@mui/icons-material/Person';
+import GroupIcon from '@mui/icons-material/Group';
 import { useTheme } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -32,9 +33,7 @@ import type { Database } from '../../types/supabase';
 // Install (if not yet): npm i @mui/x-charts
 import { LineChart, BarChart } from '@mui/x-charts';
 
-type DailyEntryRow = Database['public']['Tables']['daily_entries']['Row'] & {
-  users?: { full_name: string | null; avatar_url: string | null };
-};
+type DailyEntryRow = Database['public']['Tables']['daily_entries']['Row'];
 
 interface ProjectOption {
   project_id: string;
@@ -104,43 +103,44 @@ const Dashboard: React.FC = () => {
     })();
   }, [selectedProjectId]);
 
-  // Fetch daily entries (last 10 for building charts / listing)
-  useEffect(() => {
+  // Fetch daily entries (source: daily_entries table)
+  const fetchEntries = useCallback(async () => {
     if (!user || !selectedProjectId) return;
-    (async () => {
-      setLoadingEntries(true);
-      let q = supabase
-        .from('daily_entries')
-        .select('id, entry_date, created_by, project_id, hours_worked, hours_wasted, completed, plan_to_complete, users(full_name, avatar_url)')
-        .eq('project_id', selectedProjectId)
-        .order('entry_date', { ascending: false })
-        .limit(40);
-      if (view === 'impact') {
-        q = q.eq('created_by', user.id);
-      }
-      const { data } = await q;
+    setLoadingEntries(true);
+    let query = supabase
+      .from('daily_entries')
+      .select(
+        'id, entry_date, created_by, project_id, hours_worked, hours_wasted, completed, plan_to_complete, inserted_at'
+      )
+      .eq('project_id', selectedProjectId)
+      .order('entry_date', { ascending: false })
+      .limit(50);
+    if (view === 'impact') query = query.eq('created_by', user.id);
+    const { data, error } = await query;
+    if (!error) {
       const list = (data ?? []) as DailyEntryRow[];
-      setEntries(list.slice(0, 5)); // display last 5
-      // Build 5-day aggregate series
-      const map = new Map<string, { my: number; team: number }>();
-      list.forEach(e => {
-        const d = e.entry_date;
-        if (!d) return;
-        const key = d;
-        if (!map.has(key)) map.set(key, { my: 0, team: 0 });
-        const bucket = map.get(key)!;
-        const hrs = Number(e.hours_worked || 0);
+      setEntries(list.slice(0, 5));
+      const agg = new Map<string, { my: number; team: number }>();
+      list.forEach(row => {
+        if (!row.entry_date) return;
+        if (!agg.has(row.entry_date)) agg.set(row.entry_date, { my: 0, team: 0 });
+        const bucket = agg.get(row.entry_date)!;
+        const hrs = Number(row.hours_worked || 0);
         bucket.team += hrs;
-        if (e.created_by === user.id) bucket.my += hrs;
+        if (row.created_by === user.id) bucket.my += hrs;
       });
-      const series = Array.from(map.entries())
+      const series = Array.from(agg.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
         .slice(-7)
         .map(([date, v]) => ({ date, my: v.my, team: v.team }));
       setHoursSeries(series);
-      setLoadingEntries(false);
-    })();
-  }, [user, selectedProjectId, view]);
+    }
+    setLoadingEntries(false);
+  }, [user, selectedProjectId, view, supabase]);
+
+  useEffect(() => {
+    fetchEntries();
+  }, [fetchEntries]);
 
   // Fetch member equity % and hours aggregates
   useEffect(() => {
@@ -276,6 +276,10 @@ const Dashboard: React.FC = () => {
     ]
   );
 
+  const toggleView = useCallback(() => {
+    setView(v => (v === 'impact' ? 'team' : 'impact'));
+  }, []);
+
   return (
     <Box sx={{ p: 2, maxWidth: 1200, mx: 'auto' }}>
       <Paper
@@ -302,31 +306,45 @@ const Dashboard: React.FC = () => {
             <Typography variant={isMobile ? 'h5' : 'h4'} sx={{ fontWeight: 700 }}>
               Dashboard
             </Typography>
-            <ToggleButtonGroup
-              value={view}
-              exclusive
-              onChange={(_, v) => v && setView(v)}
-              size={isMobile ? 'small' : 'medium'}
-              sx={{ bgcolor: 'background.default', borderRadius: 2 }}
-            >
-              <ToggleButton value="impact" sx={{ px: 2, fontWeight: 600 }}>
-                My Impact
-              </ToggleButton>
-              <ToggleButton value="team" sx={{ px: 2, fontWeight: 600 }}>
-                Team Progress
-              </ToggleButton>
-            </ToggleButtonGroup>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Tooltip
+                title={view === 'impact' ? 'Showing My Impact – click to view Team Progress' : 'Showing Team Progress – click to view My Impact'}
+                arrow
+              >
+                <IconButton
+                  onClick={toggleView}
+                  size="small"
+                  aria-label={view === 'impact' ? 'Switch to Team Progress' : 'Switch to My Impact'}
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    bgcolor: 'action.hover',
+                    color: 'text.primary',
+                    transition: 'all 0.2s',
+                    '&:hover': { bgcolor: 'action.selected' },
+                    ...(view === 'team' && {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': { bgcolor: 'primary.dark' },
+                    }),
+                  }}
+                >
+                  {view === 'impact' ? <PersonIcon fontSize="small" /> : <GroupIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+            </Box>
             {loadingProjects ? (
-              <Skeleton variant="rectangular" width={140} height={40} sx={{ borderRadius: 2 }} />
+              <Skeleton variant="rectangular" width={140} height={20} sx={{ borderRadius: 2 }} />
             ) : (
               <Select
                 size={isMobile ? 'small' : 'medium'}
                 value={selectedProjectId}
                 onChange={e => setSelectedProjectId(e.target.value as string)}
                 displayEmpty
-                sx={{ minWidth: isMobile ? 140 : 200 }}
+                sx={{ minWidth: isMobile ? 140 : 200, height: 40 }}
                 IconComponent={ArrowDropDownIcon}
               >
                 {projects.map(p => (
@@ -344,12 +362,44 @@ const Dashboard: React.FC = () => {
                 ))}
               </Select>
             )}
-            <IconButton color="primary" onClick={() => navigate('/settings')}>
-              <SettingsIcon />
-            </IconButton>
-            <IconButton color="success" onClick={() => navigate('/checkin')}>
-              <CheckCircleIcon />
-            </IconButton>
+            <Tooltip
+                title={'Configure Settings'}
+                arrow
+              >
+                <IconButton
+                color="primary"
+                onClick={() => navigate('/settings')}
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  bgcolor: 'action.hover',
+                  '&:hover': { bgcolor: 'action.selected' },
+                }}
+                aria-label="Settings"
+              >
+                <SettingsIcon fontSize="medium" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip
+                title={'Log a new Daily Check-In'}
+                arrow
+              >
+              <IconButton
+                onClick={() => navigate('/checkin')}
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  bgcolor: 'action.hover',
+                  color:'rgb(0 0 0 / 87%)',
+                  '&:hover': { bgcolor: 'action.selected', },
+                }}
+                aria-label="New Check-In"
+              >
+                <CheckCircleIcon fontSize="medium" />
+              </IconButton>
+            </Tooltip>
           </Box>
         </Box>
       </Paper>
@@ -477,9 +527,45 @@ const Dashboard: React.FC = () => {
       </Grid>
 
       <Paper elevation={3} sx={{ p: 3, borderRadius: 3, mb: 6 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-          {view === 'impact' ? 'My Recent Entries' : 'Team Recent Entries'}
-        </Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 2,
+            flexWrap: 'wrap',
+            mb: 2,
+          }}
+        >
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              {view === 'impact' ? 'My Checkin History' : 'Team Checkin History'}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}
+            >
+              Showing the five most recent daily entries.
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => navigate('/checkin')}
+            >
+              New Check-In
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              onClick={() => navigate('/checkins')}
+            >
+              View More
+            </Button>
+          </Box>
+        </Box>
+
         {loadingEntries ? (
           <Box>
             {[...Array(5)].map((_, i) => (
@@ -496,15 +582,15 @@ const Dashboard: React.FC = () => {
               <Paper key={entry.id} elevation={1} sx={{ mb: 1.5, borderRadius: 2 }}>
                 <ListItem alignItems="flex-start">
                   <ListItemAvatar>
-                    <Avatar src={entry.users?.avatar_url ?? undefined}>
-                      {entry.users?.full_name?.[0] ?? 'U'}
+                    <Avatar>
+                      {(entry.created_by || 'U').slice(0, 1).toUpperCase()}
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
                     primary={
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                          {entry.users?.full_name ?? 'You'}
+                          {entry.created_by === user?.id ? 'You' : entry.created_by}
                         </Typography>
                         <Chip
                           label={`${entry.hours_worked ?? 0}h`}
@@ -536,11 +622,6 @@ const Dashboard: React.FC = () => {
             ))}
           </List>
         )}
-        <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Button size="small" variant="outlined" onClick={() => navigate('/checkin')}>
-            New Check-In
-          </Button>
-        </Box>
       </Paper>
     </Box>
   );
