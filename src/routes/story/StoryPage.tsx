@@ -1,10 +1,14 @@
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../../index.css";
 import {
   Rocket, Users, CheckCircle2, CalendarCheck, DollarSign, Target,
   ChevronRight, GitBranch
 } from "lucide-react";
 import { motion, useInView, useScroll, useSpring, useTransform } from "framer-motion";
+import Nav from "../../components/SiteNav";
+import ButtonCSS from "../../components/ButtonCss";
+import { useAuth } from "../../components/AuthProvider";
+import Footer from "../../components/Footer";
 
 /**
  * StoryPage
@@ -33,9 +37,23 @@ const container = {
 };
 
 export default function StoryPage() {
+
+  const { user, loading } = useAuth();
+  const isLoggedIn = !!user;
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12)
+    onScroll()
+    window.addEventListener("scroll", onScroll)
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
   return (
     <div className="min-h-screen w-full bg-[#05060A] text-white selection:bg-white/10 selection:text-white">
       <BackgroundFX />
+      <ButtonCSS /> {/* Mount the hook-using component properly */}
+      <Nav scrolled={scrolled} isLoggedIn={isLoggedIn} loadingAuth={loading} />
 
       {/* HERO */}
       <section className="relative pt-24 pb-12 overflow-hidden md:pt-28 md:pb-16">
@@ -160,6 +178,7 @@ export default function StoryPage() {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }
