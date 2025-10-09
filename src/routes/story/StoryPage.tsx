@@ -209,11 +209,21 @@ function Timeline() {
 
         {/* One flow container with a centered rail */}
         <div ref={ref} className="relative">
-          {/* Rail background */}
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[4px] h-full bg-white/10 rounded-full" />
-          {/* Progress fill */}
+          {/* Rail background (mobile: far left of screen, lg+: centered) */}
+          <div
+            className="
+              absolute top-0 h-full w-[4px] rounded-full bg-white/10
+              left-0 -translate-x-4
+              lg:left-1/2 lg:-translate-x-1/2
+            "
+          />
+          {/* Progress fill (mobile: far left, lg+: centered) */}
           <motion.div
-            className="absolute left-1/2 -translate-x-1/2 top-0 w-[4px] rounded-full"
+            className="
+              absolute top-0 w-[4px] rounded-full
+              left-0 -translate-x-4
+              lg:left-1/2 lg:-translate-x-1/2
+            "
             style={{
               height: fill,
               background: "linear-gradient(180deg, rgba(236,72,153,0.9), rgba(34,211,238,0.9))",
@@ -241,13 +251,16 @@ function TimelineItem({
   const ref = useRef<HTMLDivElement | null>(null);
   const inView = useInView(ref, { once: true, amount: 0.6 });
 
-  // Stagger: Step 1 (index 0) on RIGHT, Step 2 on LEFT, etc.
   const placeRight = index % 2 === 0;
 
   return (
     <div
       ref={ref}
-      className="relative grid items-start gap-4 grid-cols-1 lg:grid-cols-[1fr_auto_1fr]"
+      className="
+        relative grid items-start
+        grid-cols-[24px_1fr] lg:grid-cols-[1fr_auto_1fr]
+        gap-3 lg:gap-4
+      "
     >
       {/* Center node */}
       <div className="flex items-center justify-center order-1 lg:order-none lg:col-start-2">
@@ -264,7 +277,7 @@ function TimelineItem({
         initial={{ opacity: 0, y: 16, x: placeRight ? 16 : -16 }}
         animate={inView ? { opacity: 1, y: 0, x: 0 } : {}}
         transition={{ duration: 0.45, ease: [0.2, 0.8, 0.2, 1] }}
-        className={`${placeRight ? "lg:col-start-3" : "lg:col-start-1"} order-2 lg:order-none`}
+        className={`${placeRight ? "lg:col-start-3" : "lg:col-start-1"} col-start-2 order-2 lg:order-none`}
       >
         <div className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
           <div className="inline-flex items-center gap-2 mb-3">
