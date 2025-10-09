@@ -11,6 +11,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Button }
 import AddProject from './routes/add-project/AddProject';
 import Checkins from './routes/checkins/Checkins';
 import LandingPage from './routes/landing/Landing';
+import StoryPage from './routes/story/StoryPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -23,6 +24,11 @@ const App: React.FC = () => (
   <Routes>
     <Route path="/" element={
       <LandingPage />
+    } />
+    <Route path ="/story" element={
+      <ProtectedRoute>
+        <StoryPage />
+      </ProtectedRoute>
     } />
     <Route path="/onboarding" element={
       <ProtectedRoute>

@@ -67,16 +67,16 @@ function Nav({ scrolled, isLoggedIn, loadingAuth }: { scrolled: boolean; isLogge
         WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none'
       }}
     >
-      <div className="mx-auto max-w-7xl px-5 h-16 flex items-center justify-between">
-         <a href="#top" className="group inline-flex items-center gap-2">
+      <div className="flex items-center justify-between h-16 px-5 mx-auto max-w-7xl">
+         <a href="#top" className="inline-flex items-center gap-2 group">
            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-fuchsia-500 to-cyan-400 shadow-[0_0_40px_-8px] shadow-fuchsia-500/40 grid place-items-center">
-             <Sparkles className="h-4 w-4" />
+             <Sparkles className="w-4 h-4" />
            </div>
            <span className="text-lg font-semibold tracking-tight">
              sweaty<span className="text-fuchsia-400">.dev</span>
            </span>
          </a>
-         <div className="hidden md:flex items-center gap-7 text-sm/none">
+         <div className="items-center hidden md:flex gap-7 text-sm/none">
            <a href="#story" className="nav-link">Why Sweaty</a>
            <a href="#features" className="nav-link">Features</a>
            <a href="#heatmap" className="nav-link">Progress</a>
@@ -87,7 +87,7 @@ function Nav({ scrolled, isLoggedIn, loadingAuth }: { scrolled: boolean; isLogge
              rel="noreferrer"
              className="inline-flex items-center gap-1 nav-link"
            >
-             <Github className="h-4 w-4" /> GitHub
+             <Github className="w-4 h-4" /> GitHub
            </a>
          </div>
          <div className="flex items-center gap-2">
@@ -95,14 +95,13 @@ function Nav({ scrolled, isLoggedIn, loadingAuth }: { scrolled: boolean; isLogge
              <span className="badge-soft">Checking session…</span>
            ) : isLoggedIn ? (
              <>
-              <a href="/dashboard" className="btn btn-primary subtle-shadow hidden sm:inline-flex"><LayoutGrid className="h-4 w-4" /> Dashboard</a>
-              <a href="/profile" className="btn btn-glass hidden sm:inline-flex">Profile</a>
-              <a href="/auth?signout=1" className="btn btn-outline inline-flex">Log out</a>
+              <a href="/dashboard" className="hidden btn btn-primary subtle-shadow sm:inline-flex"><LayoutGrid className="w-4 h-4" /> Dashboard</a>
+              <a href="/settings" className="hidden btn btn-glass sm:inline-flex">Profile</a>
              </>
            ) : (
              <>
-              <a href="/onboarding" className="btn btn-primary hidden sm:inline-flex">Get Started</a>
-              <a href="/auth" className="btn btn-outline inline-flex"><LogIn className="h-4 w-4" /> Login</a>
+              <a href="/onboarding" className="hidden btn btn-primary sm:inline-flex">Get Started</a>
+              <a href="/auth" className="inline-flex btn btn-outline"><LogIn className="w-4 h-4" /> Login</a>
              </>
            )}
          </div>
@@ -120,34 +119,34 @@ function Hero({ isLoggedIn }: { isLoggedIn: boolean }) {
   const item = { hidden: { y: 10, opacity: 0 }, show: { y: 0, opacity: 1, transition: { type: "spring" as const, stiffness: 80 } } }
 
   return (
-    <section id="top" className="relative pt-28 md:pt-36 pb-24 md:pb-40 overflow-hidden">
+    <section id="top" className="relative pb-24 overflow-hidden pt-28 md:pt-36 md:pb-40">
       {/* Hero BG Orbs (drop Canva render here if desired) */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
+      <div className="absolute inset-0 pointer-events-none -z-10">
         <div className="absolute -top-24 -left-16 h-[32rem] w-[32rem] rounded-full bg-fuchsia-500/20 blur-[120px]" />
         <div className="absolute top-20 -right-24 h-[28rem] w-[28rem] rounded-full bg-cyan-400/20 blur-[120px]" />
         <Noise />
       </div>
 
-      <div className="mx-auto max-w-7xl px-5 grid md:grid-cols-2 gap-10 items-center">
+      <div className="grid items-center gap-10 px-5 mx-auto max-w-7xl md:grid-cols-2">
         <motion.div variants={container} initial="hidden" animate="show" className="relative z-10">
-          <motion.h1 variants={item} className="text-5xl md:text-6xl font-black tracking-tight leading-tight">
-            Build <span className="bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-400 via-rose-300 to-cyan-300">Sweat Equity</span>.
+          <motion.h1 variants={item} className="text-5xl font-black leading-tight tracking-tight md:text-6xl">
+            Build <span className="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 via-rose-300 to-cyan-300">Sweat Equity</span>.
             <br/>Get <span className="underline decoration-cyan-400/60 decoration-4 underline-offset-8">Funded</span>.
           </motion.h1>
-          <motion.p variants={item} className="mt-6 text-lg md:text-xl text-white/80 max-w-xl">
+          <motion.p variants={item} className="max-w-xl mt-6 text-lg md:text-xl text-white/80">
             Sweaty.dev motivates software teams to ship. Document your journey, track who did what, and show investors momentum—so your startup can go from idea to <em>inevitable</em>.
           </motion.p>
-          <motion.div variants={item} className="mt-8 flex flex-wrap items-center gap-3">
-            <a id="get-started" href={isLoggedIn ? "/dashboard" : "/onboarding"} className="btn primary text-base inline-flex gap-2">
-              {isLoggedIn ? "Open Dashboard" : "Get Started"} <ArrowRight className="h-4 w-4"/>
+          <motion.div variants={item} className="flex flex-wrap items-center gap-3 mt-8">
+            <a id="get-started" href={isLoggedIn ? "/dashboard" : "/onboarding"} className="inline-flex gap-2 text-base btn primary">
+              {isLoggedIn ? "Open Dashboard" : "Get Started"} <ArrowRight className="w-4 h-4"/>
             </a>
-            <a href="https://github.com/Cclayelijah/Speed-Equity" target="_blank" rel="noreferrer" className="btn muted text-base inline-flex gap-2">
-              <Github className="h-4 w-4"/> Star on GitHub
+            <a href="https://github.com/Cclayelijah/Speed-Equity" target="_blank" rel="noreferrer" className="inline-flex gap-2 text-base btn muted">
+              <Github className="w-4 h-4"/> Star on GitHub
             </a>
-            <a href="#story" className="btn ghost text-base inline-flex gap-2"><PlayCircle className="h-4 w-4"/> How it works</a>
+            <a href="story" className="inline-flex gap-2 text-base btn ghost"><PlayCircle className="w-4 h-4"/> How it works</a>
           </motion.div>
 
-          <motion.div variants={item} className="mt-10 flex items-center gap-4 opacity-90">
+          <motion.div variants={item} className="flex items-center gap-4 mt-10 opacity-90">
             <Badge>For Startups & OSS Teams</Badge>
             <Badge>Silicon Valley Ready</Badge>
             <Badge>Investor Friendly</Badge>
@@ -170,19 +169,19 @@ function Hero({ isLoggedIn }: { isLoggedIn: boolean }) {
               draggable={false}
             />
             {/* Optional subtle gradient overlay for contrast */}
-            <div className="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-tr from-fuchsia-500/10 via-transparent to-cyan-400/10 mix-blend-screen" />
+            <div className="absolute inset-0 pointer-events-none rounded-3xl bg-gradient-to-tr from-fuchsia-500/10 via-transparent to-cyan-400/10 mix-blend-screen" />
           </div>
 
           {/* Fallback (kept for future / can remove if not needed) */}
           <div className="sr-only">
-            <div className="backdrop-blur-xl bg-white/5 rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+            <div className="overflow-hidden border shadow-2xl backdrop-blur-xl bg-white/5 rounded-3xl border-white/10">
               <div className="p-6 text-sm text-white/70">
                 Fallback metrics mock if hero image not loaded.
               </div>
             </div>
           </div>
 
-          <div className="pointer-events-none absolute -right-6 -bottom-6 hidden md:block">
+          <div className="absolute hidden pointer-events-none -right-6 -bottom-6 md:block">
             <Glow size={240} />
           </div>
         </motion.div>
@@ -212,22 +211,22 @@ function CinematicStory() {
           <GradientBackdrop />
         </motion.div>
 
-        <div className="mx-auto max-w-5xl h-full px-5 grid place-items-center">
+        <div className="grid h-full max-w-5xl px-5 mx-auto place-items-center">
           <div className="space-y-16">
             <StoryCard
-              icon={<Rocket className="h-6 w-6"/>}
+              icon={<Rocket className="w-6 h-6"/>}
               title="Document the journey"
               body="Turn commits, PRs, chats and demo clips into a living story investors can skim in minutes."
               tag="Narrative"
             />
             <StoryCard
-              icon={<Users className="h-6 w-6"/>}
+              icon={<Users className="w-6 h-6"/>}
               title="Track real contributions"
               body="Attribute work precisely. Celebrate output, not politics. Let data speak for the team."
               tag="Attribution"
             />
             <StoryCard
-              icon={<Coins className="h-6 w-6"/>}
+              icon={<Coins className="w-6 h-6"/>}
               title="Maximise motivation"
               body="Watch your sweat convert to equity projections in real time. See the money you’re leaving on the table when you procrastinate."
               tag="Motivation"
@@ -242,29 +241,29 @@ function CinematicStory() {
 /** FEATURES */
 function Features() {
   const items = [
-    { icon: <Gauge className="h-5 w-5"/>, title: "Momentum Dashboard", body: "Weekly velocity, burn, and ship cadence — distilled for investors and teammates."},
-    { icon: <GitBranch className="h-5 w-5"/>, title: "Git-native Signals", body: "Auto-pull commits, PRs, issues from GitHub/GitLab with zero fuss."},
-    { icon: <Users className="h-5 w-5"/>, title: "Contributor Ledger", body: "Fair attribution by repo, task, and week. See who’s carrying, who’s stuck."},
-    { icon: <Coins className="h-5 w-5"/>, title: "Sweat → Equity Model", body: "Map activity to projected valuation based on your runway + goals."},
+    { icon: <Gauge className="w-5 h-5"/>, title: "Momentum Dashboard", body: "Weekly velocity, burn, and ship cadence — distilled for investors and teammates."},
+    { icon: <GitBranch className="w-5 h-5"/>, title: "Git-native Signals", body: "Auto-pull commits, PRs, issues from GitHub/GitLab with zero fuss."},
+    { icon: <Users className="w-5 h-5"/>, title: "Contributor Ledger", body: "Fair attribution by repo, task, and week. See who’s carrying, who’s stuck."},
+    { icon: <Coins className="w-5 h-5"/>, title: "Sweat → Equity Model", body: "Map activity to projected valuation based on your runway + goals."},
   ]
 
   return (
     <section id="features" className="relative py-24 md:py-36">
-      <div className="mx-auto max-w-7xl px-5">
+      <div className="px-5 mx-auto max-w-7xl">
         <div className="max-w-3xl">
-          <h2 className="text-3xl md:text-5xl font-black tracking-tight">Everything you need to <span className="text-cyan-300">ship</span> and get <span className="text-fuchsia-300">funded</span>.</h2>
+          <h2 className="text-3xl font-black tracking-tight md:text-5xl">Everything you need to <span className="text-cyan-300">ship</span> and get <span className="text-fuchsia-300">funded</span>.</h2>
           <p className="mt-4 text-white/80">Designed for Silicon Valley speed. Built for remote teams. Loved by founders who sweat the craft.</p>
         </div>
 
-        <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid gap-5 mt-10 sm:grid-cols-2 lg:grid-cols-4">
           {items.map((it, i) => (
             <motion.div key={i} whileHover={{ y: -6 }} className="group rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
-              <div className="h-10 w-10 rounded-xl grid place-items-center bg-white/5 border border-white/10">
+              <div className="grid w-10 h-10 border rounded-xl place-items-center bg-white/5 border-white/10">
                 {it.icon}
               </div>
               <h3 className="mt-4 font-semibold">{it.title}</h3>
               <p className="mt-2 text-sm text-white/75">{it.body}</p>
-              <div className="mt-4 text-xs text-white/60 inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="inline-flex items-center gap-1 mt-4 text-xs transition-opacity opacity-0 text-white/60 group-hover:opacity-100">
                 Learn more <ExternalLink className="h-3.5 w-3.5"/>
               </div>
             </motion.div>
@@ -284,11 +283,11 @@ function Heatmap() {
 
   return (
     <section id="heatmap" className="relative py-24 md:py-28">
-      <div className="mx-auto max-w-7xl px-5">
-        <div className="flex items-end justify-between gap-6 flex-wrap">
+      <div className="px-5 mx-auto max-w-7xl">
+        <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <h2 className="text-2xl md:text-4xl font-black tracking-tight">Make progress impossible to ignore.</h2>
-            <p className="mt-3 text-white/80 max-w-xl">Your public graph tells a story. Show consistent output and compounding effort. Investors love this view.</p>
+            <h2 className="text-2xl font-black tracking-tight md:text-4xl">Make progress impossible to ignore.</h2>
+            <p className="max-w-xl mt-3 text-white/80">Your public graph tells a story. Show consistent output and compounding effort. Investors love this view.</p>
           </div>
           <a href="/onboarding" className="btn primary">Start Tracking</a>
         </div>
@@ -296,7 +295,7 @@ function Heatmap() {
         <div className="mt-8 rounded-2xl p-6 border border-white/10 bg-white/[0.03]">
           <div className="grid grid-cols-[repeat(12,1fr)] gap-2">
             {Array.from({ length: 12 }).map((_, col) => (
-              <div key={col} className="grid grid-rows-7 gap-2">
+              <div key={col} className="grid gap-2 grid-rows-7">
                 {Array.from({ length: 7 }).map((_, row) => {
                   const idx = col*7 + row
                   const val = data[idx]
@@ -308,7 +307,7 @@ function Heatmap() {
                       whileInView={{ scale: 1, opacity: 1 }}
                       viewport={{ once: true }}
                       transition={{ delay: idx*0.01 }}
-                      className="h-5 w-full rounded-md"
+                      className="w-full h-5 rounded-md"
                       style={{ background: `linear-gradient(135deg, rgba(236,72,153,${0.15+0.6*intensity}), rgba(34,211,238,${0.15+0.6*intensity}))` }}
                       title={`${val} units`}
                     />
@@ -344,9 +343,9 @@ function SocialProof() {
 
   return (
     <section className="relative py-24 md:py-32">
-      <div className="mx-auto max-w-6xl px-5">
-        <h2 className="text-center text-3xl md:text-5xl font-black tracking-tight">Loved by builders who ship.</h2>
-        <div className="mt-10 grid md:grid-cols-3 gap-5">
+      <div className="max-w-6xl px-5 mx-auto">
+        <h2 className="text-3xl font-black tracking-tight text-center md:text-5xl">Loved by builders who ship.</h2>
+        <div className="grid gap-5 mt-10 md:grid-cols-3">
           {quotes.map((q, i) => (
             <motion.figure key={i} whileHover={{ y: -6 }} className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
               <blockquote className="text-white/85">“{q.quote}”</blockquote>
@@ -363,14 +362,14 @@ function SocialProof() {
 function CTASection() {
   return (
     <section className="relative py-20">
-      <div className="mx-auto max-w-6xl px-5">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-fuchsia-600/30 via-purple-600/20 to-cyan-500/20 p-10 text-center">
+      <div className="max-w-6xl px-5 mx-auto">
+        <div className="relative p-10 overflow-hidden text-center border rounded-3xl border-white/10 bg-gradient-to-br from-fuchsia-600/30 via-purple-600/20 to-cyan-500/20">
           <Glow size={360} />
-          <h3 className="text-2xl md:text-4xl font-black tracking-tight">Ready to get sweaty?</h3>
+          <h3 className="text-2xl font-black tracking-tight md:text-4xl">Ready to get sweaty?</h3>
           <p className="mt-3 text-white/85">Turn your team’s effort into unmistakable momentum — then turn momentum into money.</p>
-          <div className="mt-6 flex items-center justify-center gap-3">
-            <a href="/onboarding" className="btn primary text-base">Get Started</a>
-            <a href="/demo" className="btn ghost text-base">Watch Demo</a>
+          <div className="flex items-center justify-center gap-3 mt-6">
+            <a href="/onboarding" className="text-base btn primary">Get Started</a>
+            <a href="/demo" className="text-base btn ghost">Watch Demo</a>
           </div>
         </div>
       </div>
@@ -389,8 +388,8 @@ function FAQ() {
 
   return (
     <section id="faq" className="relative py-20">
-      <div className="mx-auto max-w-4xl px-5">
-        <h3 className="text-2xl md:text-4xl font-black tracking-tight">FAQs</h3>
+      <div className="max-w-4xl px-5 mx-auto">
+        <h3 className="text-2xl font-black tracking-tight md:text-4xl">FAQs</h3>
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03]">
           {faqs.map((f, i) => (
             <details
@@ -398,16 +397,16 @@ function FAQ() {
               className="group border-b border-white/10 last:border-b-0 px-6 py-4 open:bg-white/[0.02] transition-colors"
             >
               <summary
-                className="flex items-center justify-between gap-4 list-none cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/40 rounded-xl py-1"
+                className="flex items-center justify-between gap-4 py-1 list-none outline-none cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/40 rounded-xl"
               >
                 <span className="font-medium text-white/90 group-open:text-white">
                   {f.q}
                 </span>
                 <ChevronDown
-                  className="h-5 w-5 text-white/55 transition-transform duration-300 group-open:rotate-180 group-hover:text-white/80"
+                  className="w-5 h-5 transition-transform duration-300 text-white/55 group-open:rotate-180 group-hover:text-white/80"
                 />
               </summary>
-              <p className="mt-3 text-sm text-white/75 pr-1">
+              <p className="pr-1 mt-3 text-sm text-white/75">
                 {f.a}
               </p>
             </details>
@@ -421,17 +420,17 @@ function FAQ() {
 /** FOOTER */
 function Footer() {
   return (
-    <footer className="relative border-t border-white/10 py-12">
-      <div className="mx-auto max-w-7xl px-5 flex flex-col md:flex-row items-center justify-between gap-6">
+    <footer className="relative py-12 border-t border-white/10">
+      <div className="flex flex-col items-center justify-between gap-6 px-5 mx-auto max-w-7xl md:flex-row">
         <a href="#top" className="inline-flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-fuchsia-500 to-cyan-400 grid place-items-center">
-            <Sparkles className="h-4 w-4" />
+          <div className="grid w-8 h-8 rounded-lg bg-gradient-to-br from-fuchsia-500 to-cyan-400 place-items-center">
+            <Sparkles className="w-4 h-4" />
           </div>
           <span className="text-lg font-semibold tracking-tight">sweaty<span className="text-fuchsia-400">.dev</span></span>
         </a>
-        <div className="text-sm text-white/70 flex items-center gap-4">
+        <div className="flex items-center gap-4 text-sm text-white/70">
           <a href="https://github.com/Cclayelijah/Speed-Equity" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-white">
-            <Github className="h-4 w-4"/> GitHub Project
+            <Github className="w-4 h-4"/> GitHub Project
           </a>
           <span className="opacity-50">•</span>
           <a href="mailto:hello@sweaty.dev" className="hover:text-white">Contact</a>
@@ -466,7 +465,7 @@ function StoryCard({ icon, title, body, tag }: { icon: React.ReactNode; title: s
     <motion.div initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ type: "spring", stiffness: 80 }} className="grid md:grid-cols-[56px_1fr] gap-5 items-start">
       <div className="h-14 w-14 rounded-2xl border border-white/10 bg-white/[0.06] grid place-items-center">{icon}</div>
       <div>
-        <div className="text-xs text-white/60 mb-1">{tag}</div>
+        <div className="mb-1 text-xs text-white/60">{tag}</div>
         <h3 className="text-xl font-semibold">{title}</h3>
         <p className="mt-1.5 text-white/75 max-w-2xl">{body}</p>
       </div>
@@ -480,7 +479,7 @@ function BackgroundFX() {
       {/* subtle vignette */}
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(1200px_600px_at_50%_-10%,rgba(255,255,255,0.06),transparent)]" />
       {/* starfield speckles */}
-      <div className="pointer-events-none fixed inset-0 -z-10 opacity-50" style={{ backgroundImage: "radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,.2), rgba(255,255,255,0)), radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,.2), rgba(255,255,255,0)), radial-gradient(1px 1px at 130px 90px, rgba(255,255,255,.2), rgba(255,255,255,0))"}} />
+      <div className="fixed inset-0 opacity-50 pointer-events-none -z-10" style={{ backgroundImage: "radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,.2), rgba(255,255,255,0)), radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,.2), rgba(255,255,255,0)), radial-gradient(1px 1px at 130px 90px, rgba(255,255,255,.2), rgba(255,255,255,0))"}} />
     </>
   )
 }
@@ -491,7 +490,7 @@ function Noise() {
 
 function Glow({ size = 260 }: { size?: number }) {
   return (
-    <div style={{ width: size, height: size }} className="pointer-events-none absolute -z-10 rounded-full bg-gradient-to-tr from-fuchsia-400/30 via-rose-300/20 to-cyan-300/30 blur-3xl" />
+    <div style={{ width: size, height: size }} className="absolute rounded-full pointer-events-none -z-10 bg-gradient-to-tr from-fuchsia-400/30 via-rose-300/20 to-cyan-300/30 blur-3xl" />
   )
 }
 
