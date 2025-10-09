@@ -12,6 +12,7 @@ import AddProject from './routes/add-project/AddProject';
 import Checkins from './routes/checkins/Checkins';
 import LandingPage from './routes/landing/Landing';
 import StoryPage from './routes/story/StoryPage';
+import PrivacyPolicy from './routes/policy/PrivacyPolicy';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -24,6 +25,11 @@ const App: React.FC = () => (
   <Routes>
     <Route path="/" element={
       <LandingPage />
+    } />
+    <Route path ="/privacy" element={
+      <ProtectedRoute>
+        <PrivacyPolicy />
+      </ProtectedRoute>
     } />
     <Route path ="/story" element={
       <ProtectedRoute>
