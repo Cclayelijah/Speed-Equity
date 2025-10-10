@@ -1,4 +1,4 @@
-import { Github, LayoutGrid, Sparkles } from "lucide-react";
+import { Github, LayoutGrid, LogIn, Sparkles } from "lucide-react";
 
 /** NAVBAR */
 export default function Nav({ scrolled, isLoggedIn, loadingAuth }: { scrolled: boolean; isLoggedIn: boolean; loadingAuth: boolean }) {
