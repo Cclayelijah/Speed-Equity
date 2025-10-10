@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { motion, useScroll, useTransform, useSpring, useReducedMotion } from "framer-motion"
-import { Rocket, Gauge, Coins, Users, GitBranch, Sparkles, Github, ExternalLink, PlayCircle, ArrowRight, LogIn, LayoutGrid, ChevronDown } from "lucide-react"
+import { Rocket, Gauge, Coins, Users, GitBranch, Github, ExternalLink, PlayCircle, ArrowRight, ChevronDown } from "lucide-react"
 import { useAuth } from "../../components/AuthProvider"  // <-- real auth hook
 import "../../index.css";
 import heroGraphic from "../../assets/hero-section-transparent-generated-image.png";
