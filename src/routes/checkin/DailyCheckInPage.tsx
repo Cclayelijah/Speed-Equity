@@ -140,12 +140,6 @@ const DailyCheckInPage: React.FC = () => {
     return (
       <div className="px-4">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">Daily Check In</h1>
-            <div className="flex gap-2">
-              <a href="/dashboard" className="btn btn-outline">Dashboard</a>
-            </div>
-          </div>
 
           <div className="max-w-xl p-5 mx-auto mt-4 card sm:p-6">
             <div className="h-10 mb-4 skeleton"></div>
@@ -164,12 +158,6 @@ const DailyCheckInPage: React.FC = () => {
   return (
     <div className="px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">Daily Check In</h1>
-          <div className="flex gap-2">
-            <a href="/dashboard" className="btn btn-outline">Dashboard</a>
-          </div>
-        </div>
 
         <form onSubmit={handleSubmit} className="max-w-xl p-5 mx-auto mt-4 card sm:p-6">
           <label className="label">Project</label>

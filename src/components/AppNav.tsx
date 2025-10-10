@@ -28,7 +28,10 @@ export default function AppNav({ scrolled, title }: { scrolled: boolean; title: 
            </span>
          </a>
          <div className="items-center hidden md:flex gap-7 text-sm/none">
-          <span className="text-2xl font-semibold text-white">{title}</span>
+          {/* <span className="text-2xl font-bold text-white">{title}</span> */}
+          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
+            {title}
+          </h1>
          </div>
          <div className="flex items-center gap-2">
            {navItems && navItems}
@@ -47,15 +50,15 @@ function getNavItemsByTitle(title: string) {
       navItems = <>
         <button
           className="px-4 py-2 border border-[#333] rounded btn-outline btn text-white/80 hover:bg-white/5 hover:text-white"
-          onClick={() => navigate('/settings')}
-        >
-          Settings
-        </button>
-        <button
-          className="px-4 py-2 border border-[#333] rounded btn-outline btn text-white/80 hover:bg-white/5 hover:text-white"
           onClick={() => navigate('/checkin')}
         >
           Check-In
+        </button>
+        <button
+          className="px-4 py-2 border border-[#333] rounded btn-outline btn text-white/80 hover:bg-white/5 hover:text-white"
+          onClick={() => navigate('/settings')}
+        >
+          Profile
         </button>
       </>
       break;

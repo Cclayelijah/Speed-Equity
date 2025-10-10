@@ -1,4 +1,6 @@
 todo:
 
+integrate tailwind styles accross the website
 add canva pictures to the landing page.
 fix application in prod.
+fix when you click on the project link from the onboarding page it passes the correct project id in the url
