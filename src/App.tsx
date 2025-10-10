@@ -7,12 +7,14 @@ import Dashboard from './routes/dashboard/Dashboard';
 import Settings from './routes/settings/Settings';
 import GithubConnect from './routes/integrations/GithubConnect';
 import DailyCheckInPage from './routes/checkin/DailyCheckInPage';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Button } from '@mui/material';
+import { Button } from '@mui/material';
 import AddProject from './routes/add-project/AddProject';
 import Checkins from './routes/checkins/Checkins';
 import LandingPage from './routes/landing/Landing';
 import StoryPage from './routes/story/StoryPage';
 import PrivacyPolicy from './routes/policy/PrivacyPolicy';
+import SiteLayout from './components/SiteLayout';
+import AppLayout from './components/AppLayout';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -24,52 +26,87 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const App: React.FC = () => (
   <Routes>
     <Route path="/" element={
-      <LandingPage />
+      <SiteLayout>
+        <LandingPage />
+      </SiteLayout>
     } />
     <Route path ="/privacy" element={
-      <ProtectedRoute>
+      <SiteLayout>
         <PrivacyPolicy />
-      </ProtectedRoute>
+      </SiteLayout>
     } />
     <Route path ="/story" element={
-      <ProtectedRoute>
+      <SiteLayout>
         <StoryPage />
-      </ProtectedRoute>
+      </SiteLayout>
     } />
     <Route path="/onboarding" element={
       <ProtectedRoute>
-        <Onboarding />
+        <AppLayout title="Get Started"
+        >
+          <Onboarding />
+        </AppLayout>
       </ProtectedRoute>
     } />
     <Route path="/add-project" element={
       <ProtectedRoute>
-        <AddProject ownerId={useAuth().user?.id ?? ''} />
+        <AppLayout 
+          title="New Project"
+        >
+          <AddProject ownerId={useAuth().user?.id ?? ''} />
+        </AppLayout>
       </ProtectedRoute>
     } />
-    <Route path="/auth" element={<AuthPage />} />
+    <Route path="/auth" element={
+      <AppLayout 
+        title="Ready to Sweat Equity?"
+      >
+        <AuthPage />
+      </AppLayout>
+    } />
     <Route path="/dashboard" element={
       <ProtectedRoute>
-        <Dashboard />
+        <AppLayout 
+        title="Dashboard"
+        > 
+          <Dashboard />
+        </AppLayout>
       </ProtectedRoute>
     } />
     <Route path="/settings" element={
       <ProtectedRoute>
-        <Settings />
+        <AppLayout
+          title="Settings"
+        >
+          <Settings />
+        </AppLayout>
       </ProtectedRoute>
     } />
     <Route path="/integrations" element={
       <ProtectedRoute>
-        <GithubConnect />
+        <AppLayout 
+          title="Integrations"
+        >
+          <GithubConnect />
+        </AppLayout>
       </ProtectedRoute>
     } />
     <Route path="/checkin" element={
       <ProtectedRoute>
-        <DailyCheckInPage />
+        <AppLayout 
+          title="Daily Check-In"
+        >
+          <DailyCheckInPage />
+        </AppLayout>
       </ProtectedRoute>
     } />
     <Route path="/checkins" element={
       <ProtectedRoute>
-        <Checkins />
+        <AppLayout 
+          title="Check-Ins"
+        >
+          <Checkins />
+        </AppLayout>
       </ProtectedRoute>
     } />
   </Routes>
@@ -77,34 +114,3 @@ const App: React.FC = () => (
 
 export default App;
 
-// Inside DashboardReminder component
-const DashboardReminder: React.FC = () => {
-  const [showReminder, setShowReminder] = useState(false);
-  const [dailyEntries, setDailyEntries] = useState<{ entry_date: string }[]>([]);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Example: Fetch dailyEntries from API or context here
-    // setDailyEntries(fetchedEntries);
-
-    const today = new Date().toISOString().slice(0, 10);
-    const hasCheckedInToday = dailyEntries.some(entry => entry.entry_date === today);
-    setShowReminder(!hasCheckedInToday);
-  }, [dailyEntries]);
-
-  return (
-    <>
-      {/* ...existing dashboard content... */}
-      <Dialog open={showReminder} onClose={() => setShowReminder(false)}>
-        <DialogTitle>Daily Check-In Reminder</DialogTitle>
-        <DialogContent>
-          <Typography>Don't forget to log your daily check-in!</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => navigate('/checkin')}>Check In Now</Button>
-          <Button onClick={() => setShowReminder(false)}>Dismiss</Button>
-        </DialogActions>
-      </Dialog>
-    </>
-  );
-};

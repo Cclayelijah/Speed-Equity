@@ -1,9 +1,0 @@
-@import "tailwindcss";
-
-/* Optional: page baseline matching the landing page */
-@layer base {
-  html, body, #root { height: 100%; }
-  body {
-    @apply bg-[#05060A] text-white antialiased selection:bg-white/10 selection:text-white;
-  }
-}

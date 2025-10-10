@@ -32,6 +32,7 @@ import type { Database } from '../../types/supabase';
 
 // Install (if not yet): npm i @mui/x-charts
 import { LineChart, BarChart } from '@mui/x-charts';
+import DashboardReminder from './DashboardReminder';
 
 type DailyEntryRow = Database['public']['Tables']['daily_entries']['Row'];
 
@@ -282,6 +283,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box sx={{ p: 2, maxWidth: 1200, mx: 'auto' }}>
+      <DashboardReminder />
       <Paper
         elevation={3}
         sx={{

@@ -1,21 +1,18 @@
 import { Github, LayoutGrid, LogIn, Sparkles } from "lucide-react";
 
 /** NAVBAR */
-export default function Nav({ scrolled, isLoggedIn, loadingAuth }: { scrolled: boolean; isLoggedIn: boolean; loadingAuth: boolean }) {
+export default function SiteNav({ scrolled, isLoggedIn, loadingAuth }: { scrolled: boolean; isLoggedIn: boolean; loadingAuth: boolean }) {
   return (
     <div
       className={`
-        fixed top-0 left-0 right-0 z-50
+        relative w-full
         transition-colors duration-300
         border-b
         ${scrolled
           ? "bg-[#05060A]/85 backdrop-blur-md border-white/10"
           : "bg-[#05060A]/0 border-transparent"}
       `}
-      style={{
-        willChange: 'background-color',
-        WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none'
-      }}
+      style={{ willChange: 'background-color' }}
     >
       <div className="flex items-center justify-between h-16 px-5 mx-auto max-w-7xl">
          <a href="/" className="inline-flex items-center gap-2 group">

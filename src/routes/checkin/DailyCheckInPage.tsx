@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Box, Button, TextField, Typography, Select, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Skeleton } from '@mui/material';
 import { useAuth } from '../../components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
 import { fetchUserProjects } from '../../lib/projectHelpers'; // <-- import the helper
@@ -139,133 +138,117 @@ const DailyCheckInPage: React.FC = () => {
   // Add a loading skeleton for the form
   if (initialLoading) {
     return (
-      <Box sx={{ padding: 2, maxWidth: 700, mx: 'auto' }}>
-        <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3}}>
-          <Typography variant="h4">Daily Check In</Typography>
-          <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
-            <Skeleton variant="rectangular" width={120} height={40} sx={{ borderRadius: 2 }} />
-          </Box>
-        </Box>
-        <Box sx={{ maxWidth: 500, mx: 'auto', mt: 4 }}>
-          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
-          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
-          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
-          <Skeleton variant="rectangular" height={56} sx={{ mb: 2, borderRadius: 2 }} />
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-            <CircularProgress color="primary" />
-          </Box>
-        </Box>
-      </Box>
+      <div className="px-4">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold">Daily Check In</h1>
+            <div className="flex gap-2">
+              <a href="/dashboard" className="btn btn-outline">Dashboard</a>
+            </div>
+          </div>
+
+          <div className="max-w-xl p-5 mx-auto mt-4 card sm:p-6">
+            <div className="h-10 mb-4 skeleton"></div>
+            <div className="h-10 mb-4 skeleton"></div>
+            <div className="h-10 mb-4 skeleton"></div>
+            <div className="h-10 mb-4 skeleton"></div>
+            <div className="flex justify-center">
+              <div className="loader"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ padding: 2, maxWidth: 700, mx: 'auto' }}>
-      <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3}}>
-        <Typography variant="h4">Daily Check In</Typography>
-        <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
-          <Button
-            onClick={() => navigate('/dashboard')}
-            variant="outlined"
-          >
-            Dashboard
-          </Button>
-        </Box>
-      </Box>
-      <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 500, mx: 'auto', mt: 4 }}>
-        <Select
-          value={selectedProjectId}
-          onChange={e => setSelectedProjectId(e.target.value as string)}
-          fullWidth
-          sx={{ mb: 2 }}
-          displayEmpty
-          inputProps={{ 'aria-label': 'Project' }}
-          renderValue={selected => {
-            if (!selected) {
-              return <span style={{ color: '#888' }}>Select a project</span>;
-            }
-            const project = projects.find(p => p.id === selected);
-            return project ? project.name : '';
-          }}
-          disabled={recentCheckin}
-        >
-          {projects.map(project => (
-            <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
-          ))}
-        </Select>
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-          Project: Choose which project this check-in is for.
-        </Typography>
-        <TextField
-          label="How many hours did you work yesterday?"
-          type="number"
-          value={hoursWorked}
-          onChange={e => setHoursWorked(e.target.value)}
-          fullWidth
-          required
-          sx={{ mb: 2 }}
-          disabled={recentCheckin}
-        />
-        <TextField
-          label="What did you achieve during that time?"
-          value={completed}
-          onChange={e => setCompleted(e.target.value)}
-          fullWidth
-          multiline
-          required
-          sx={{ mb: 2 }}
-          disabled={recentCheckin}
-        />
-        <TextField
-          label="How many hours did you waste yesterday?"
-          type="number"
-          value={hoursWasted}
-          onChange={e => setHoursWasted(e.target.value)}
-          fullWidth
-          required
-          sx={{ mb: 2 }}
-          disabled={recentCheckin}
-        />
-        <TextField
-          label="What are you going to do today?"
-          value={planToComplete}
-          onChange={e => setPlanToComplete(e.target.value)}
-          fullWidth
-          multiline
-          required
-          sx={{ mb: 2 }}
-          disabled={recentCheckin}
-        />
-        <Button
-          type="submit"
-          variant="contained"
-          fullWidth
-          disabled={loading || recentCheckin}
-          sx={{ mb: 2 }}
-        >
-          {recentCheckin ? 'Already Submitted Recently' : loading ? 'Submitting...' : 'Submit'}
-        </Button>
-        {success && <Typography sx={{ mt: 2 }} color="success.main">Check-in saved!</Typography>}
+    <div className="px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">Daily Check In</h1>
+          <div className="flex gap-2">
+            <a href="/dashboard" className="btn btn-outline">Dashboard</a>
+          </div>
+        </div>
 
-        <Dialog open={showModal} onClose={handleContinue}>
-          <DialogTitle>Daily Earnings Breakdown</DialogTitle>
-          <DialogContent>
-            <Typography>
-              <strong>Money Made:</strong> ${moneyMade.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </Typography>
-            <Typography>
-              <strong>Money Lost:</strong> ${moneyLost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </Typography>
-            <Typography sx={{ mt: 2 }}>
-              Based on your check-in, this is your sweat equity breakdown for yesterday.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleContinue} variant="contained">Continue to Dashboard</Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
-    </Box>
+        <form onSubmit={handleSubmit} className="max-w-xl p-5 mx-auto mt-4 card sm:p-6">
+          <label className="label">Project</label>
+          <select
+            className="mb-1 input"
+            value={selectedProjectId}
+            onChange={e => setSelectedProjectId(e.target.value)}
+            disabled={recentCheckin}
+          >
+            <option value="" disabled>Select a project</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <p className="mb-3 help">Choose which project this check-in is for.</p>
+
+          <label className="label">How many hours did you work yesterday?</label>
+          <input
+            type="number"
+            className="mb-3 input"
+            value={hoursWorked}
+            onChange={e => setHoursWorked(e.target.value)}
+            required
+            disabled={recentCheckin}
+          />
+
+          <label className="label">What did you achieve during that time?</label>
+          <textarea
+            className="input mb-3 min-h-[110px]"
+            value={completed}
+            onChange={e => setCompleted(e.target.value)}
+            required
+            disabled={recentCheckin}
+          />
+
+          <label className="label">How many hours did you waste yesterday?</label>
+          <input
+            type="number"
+            className="mb-3 input"
+            value={hoursWasted}
+            onChange={e => setHoursWasted(e.target.value)}
+            required
+            disabled={recentCheckin}
+          />
+
+          <label className="label">What are you going to do today?</label>
+          <textarea
+            className="input mb-4 min-h-[110px]"
+            value={planToComplete}
+            onChange={e => setPlanToComplete(e.target.value)}
+            required
+            disabled={recentCheckin}
+          />
+
+          <button type="submit" className="w-full btn btn-primary" disabled={loading || recentCheckin}>
+            {recentCheckin ? "Already Submitted Recently" : loading ? "Submitting..." : "Submit"}
+          </button>
+
+          {success && <p className="mt-3 text-emerald-400">Check-in saved!</p>}
+        </form>
+
+        {/* Replace MUI Dialog with Tailwind modal (quick simple) */}
+        {showModal && (
+          <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4">
+            <div className="w-full max-w-md p-5 card">
+              <h3 className="mb-2 text-xl font-semibold">Daily Earnings Breakdown</h3>
+              <p><strong>Money Made:</strong> ${moneyMade.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+              <p><strong>Money Lost:</strong> ${moneyLost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+              <p className="mt-3 text-white/80">
+                Based on your check-in, this is your sweat equity breakdown for yesterday.
+              </p>
+              <div className="flex justify-end gap-2 mt-5">
+                <button className="btn btn-primary" onClick={handleContinue}>Continue to Dashboard</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

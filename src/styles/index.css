@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@layer base {
+  html, body, #root { height: 100%; }
+  body { @apply antialiased text-white bg-[#05060A] selection:bg-white/10 selection:text-white; }
+}
+/* Keep component layer after base so @apply merges correctly */
+@import "./styles/components.css";

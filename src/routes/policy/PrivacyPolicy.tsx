@@ -1,19 +1,7 @@
 import React, { useEffect, useState } from "react";
-import "../../index.css";
-import Nav from "../../components/SiteNav";
-import Footer from "../../components/Footer";
-import ButtonCSS from "../../components/ButtonCss";
 import { useAuth } from "../../components/AuthProvider";
 import { Shield, Mail, Database, Lock, Scale, Clock, Globe, FileEdit } from "lucide-react";
 
-/**
- * PrivacyPolicy
- * - Minimal data collection (primarily email).
- * - Clear, friendly copy aligned with Sweaty.dev’s 6-step story.
- * - Reuses Nav + Footer, dark aesthetic, Tailwind v4 classes.
- *
- * Update the COMPANY_* constants below as needed.
- */
 
 const COMPANY_NAME = "Sweaty.dev";
 const PRODUCT_NAME = "Speed Equity";
@@ -34,10 +22,7 @@ export default function PrivacyPolicy() {
 
   return (
     <div className="min-h-screen w-full bg-[#05060A] text-white selection:bg-white/10 selection:text-white">
-      <BackgroundFX />
-      <ButtonCSS />
-      <Nav scrolled={scrolled} isLoggedIn={isLoggedIn} loadingAuth={loading} />
-
+     
       {/* Header */}
       <header className="relative pt-24 pb-10 md:pt-28 md:pb-12">
         <div className="max-w-5xl px-4 mx-auto sm:px-6">
@@ -266,8 +251,6 @@ export default function PrivacyPolicy() {
 
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

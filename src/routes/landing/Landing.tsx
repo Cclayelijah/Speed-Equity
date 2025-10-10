@@ -2,11 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { motion, useScroll, useTransform, useSpring, useReducedMotion } from "framer-motion"
 import { Rocket, Gauge, Coins, Users, GitBranch, Github, ExternalLink, PlayCircle, ArrowRight, ChevronDown } from "lucide-react"
 import { useAuth } from "../../components/AuthProvider"  // <-- real auth hook
-import "../../index.css";
 import heroGraphic from "../../assets/hero-section-transparent-generated-image.png";
-import ButtonCSS from "../../components/ButtonCss";
-import Nav from "../../components/SiteNav";
-import Footer from "../../components/Footer";
 
 /**
  * Sweaty.dev — Cinematic Landing Page
@@ -26,7 +22,6 @@ export default function LandingPage() {
   // Real auth integration
   const { user, loading } = useAuth();
   const isLoggedIn = !!user;
-
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -38,9 +33,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen w-full bg-[#05060A] text-white selection:bg-white/10 selection:text-white">
-      <BackgroundFX />
-      <ButtonCSS /> {/* Mount the hook-using component properly */}
-      <Nav scrolled={scrolled} isLoggedIn={isLoggedIn} loadingAuth={loading} />
       <Hero isLoggedIn={isLoggedIn} />
       <CinematicStory />
       <Features />
@@ -48,7 +40,6 @@ export default function LandingPage() {
       <SocialProof />
       <CTASection />
       <FAQ />
-      <Footer />
     </div>
   )
 }
@@ -391,17 +382,6 @@ function StoryCard({ icon, title, body, tag }: { icon: React.ReactNode; title: s
         <p className="mt-1.5 text-white/75 max-w-2xl">{body}</p>
       </div>
     </motion.div>
-  )
-}
-
-function BackgroundFX() {
-  return (
-    <>
-      {/* subtle vignette */}
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(1200px_600px_at_50%_-10%,rgba(255,255,255,0.06),transparent)]" />
-      {/* starfield speckles */}
-      <div className="fixed inset-0 opacity-50 pointer-events-none -z-10" style={{ backgroundImage: "radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,.2), rgba(255,255,255,0)), radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,.2), rgba(255,255,255,0)), radial-gradient(1px 1px at 130px 90px, rgba(255,255,255,.2), rgba(255,255,255,0))"}} />
-    </>
   )
 }
 

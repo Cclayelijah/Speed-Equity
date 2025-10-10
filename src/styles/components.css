@@ -1,0 +1,48 @@
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold transition rounded-2xl ring-1 ring-inset ring-white/15 focus:outline-none focus:ring-2 focus:ring-white/30 active:scale-95;
+  }
+
+  /* Use explicit box-shadow instead of @apply shadow-soft */
+  .btn-primary {
+    @apply text-black bg-white hover:bg-white/90;
+    box-shadow: 0 8px 30px -10px rgba(255,255,255,0.35);
+  }
+
+  .btn-outline {
+    @apply text-white bg-white/5 hover:bg-white/10 backdrop-blur-md ring-1 ring-inset ring-white/20;
+  }
+
+  .btn-ghost {
+    @apply text-white bg-transparent hover:bg-white/10 ring-1 ring-inset ring-white/15;
+  }
+
+  .btn-glass {
+    @apply text-white bg-white/15 hover:bg-white/20 backdrop-blur-md ring-1 ring-inset ring-white/20;
+  }
+
+  /* Replace @apply shadow-card with explicit value */
+  .card {
+    @apply rounded-2xl border border-white/10 bg-white/[0.03];
+    box-shadow: 0 30px 80px -40px rgba(0,0,0,0.6);
+  }
+
+  /* Subtle shadow helper without @apply arbitrary values */
+  .subtle-shadow {
+    box-shadow: 0 4px 18px -4px rgba(0,0,0,0.45), 0 2px 6px -2px rgba(0,0,0,0.40);
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold border rounded-full bg-white/10 border-white/15 text-white/80;
+  }
+
+  .nav-link { @apply transition opacity-80 hover:opacity-100; }
+  .mobile-link { @apply block px-1 py-3 transition rounded-xl text-white/80 hover:text-white hover:bg-white/10; }
+
+  .input {
+    @apply w-full rounded-xl bg-white/5 border border-white/15 px-4 py-2.5 text-sm
+           placeholder-white/50 text-white outline-none focus:ring-2 focus:ring-white/30;
+  }
+  .label { @apply block mb-1 text-sm font-medium text-white/80; }
+  .help { @apply mt-1 text-xs text-white/60; }
+}
