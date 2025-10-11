@@ -1,10 +1,26 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Camera, ShieldAlert, LogOut, UserPlus, Plus } from "lucide-react";
+import { Camera, ShieldAlert, LogOut, UserPlus, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../../components/AuthProvider";
 import { supabase } from "../../lib/supabase";
 import type { Database } from "../../types/supabase";
+import {
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  Divider,
+  Grid,
+  IconButton,
+  Skeleton,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 
 const LOGO_BUCKET = "project-logos";
 const MAX_LOGO_SIZE = 5 * 1024 * 1024;
@@ -126,7 +142,8 @@ const Settings: React.FC = () => {
         setEditValuation((p) => ({ ...p, [projectId]: projection.valuation != null ? String(projection.valuation) : "" }));
         setEditHours((p) => ({
           ...p,
-          [projectId]: projection.work_hours_until_completion != null ? String(projection.work_hours_until_completion) : "",
+          [projectId]:
+            projection.work_hours_until_completion != null ? String(projection.work_hours_until_completion) : "",
         }));
         setProjectionDirty((prev) => ({ ...prev, [projectId]: false }));
       }
@@ -168,10 +185,9 @@ const Settings: React.FC = () => {
         if (file.size > MAX_LOGO_SIZE) return toast.error("Image too large (>5MB).");
         setLogoUploading(true);
 
-        const objectName = logoKeyFrom(projectId, file);
-        const safeObjectName = objectName.replace(/^\/+/, "").replace(/^project-logos\//, "");
+        const objectName = logoKeyFrom(projectId, file).replace(/^\/+/, "").replace(/^project-logos\//, "");
 
-        const { error: upErr } = await supabase.storage.from(LOGO_BUCKET).upload(safeObjectName, file, {
+        const { error: upErr } = await supabase.storage.from(LOGO_BUCKET).upload(objectName, file, {
           upsert: true,
           contentType: file.type || "image/png",
           cacheControl: "3600",
@@ -183,7 +199,7 @@ const Settings: React.FC = () => {
           return;
         }
 
-        const { data: pub } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(safeObjectName);
+        const { data: pub } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(objectName);
         let logo_url = pub?.publicUrl || null;
 
         if (logo_url) {
@@ -196,7 +212,7 @@ const Settings: React.FC = () => {
         }
 
         if (!logo_url) {
-          const { data: signed } = await supabase.storage.from(LOGO_BUCKET).createSignedUrl(safeObjectName, 60 * 60 * 24 * 30);
+          const { data: signed } = await supabase.storage.from(LOGO_BUCKET).createSignedUrl(objectName, 60 * 60 * 24 * 30);
           logo_url = signed?.signedUrl || null;
         }
 
@@ -280,28 +296,27 @@ const Settings: React.FC = () => {
   );
 
   return (
-    <div className="max-w-3xl px-4 py-6 mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-black tracking-tight sm:text-2xl">My Projects</h1>
-        {/* <button className="btn btn-outline" onClick={() => navigate("/dashboard")}>
+    <Container maxWidth="md" className="px-4 py-6">
+      <Box mb={2} display="flex" alignItems="center" justifyContent="space-between">
+        <Typography variant="h4" fontWeight={900}>
+          My Projects
+        </Typography>
+        <Button variant="outlined" onClick={() => navigate("/dashboard")}>
           Dashboard
-        </button> */}
-      </div>
-      <div className="h-px mb-4 bg-white/10" />
+        </Button>
+      </Box>
+      <Divider className="!border-white/10" />
 
-      {/* Loading */}
       {loading ? (
-        <div>
-          <div className="mb-2 h-14 rounded-2xl bg-white/10 animate-pulse" />
-          <div className="mb-2 h-14 rounded-2xl bg-white/10 animate-pulse" />
-        </div>
+        <Stack spacing={2} mt={2}>
+          <Skeleton variant="rounded" height={56} />
+          <Skeleton variant="rounded" height={56} />
+        </Stack>
       ) : (
         <>
-          {/* Projects list */}
-          <div className="space-y-3">
+          <Stack spacing={2} mt={2}>
             {myProjects.length === 0 && (
-              <div className="py-2 text-center text-white/70">You are not a member of any projects.</div>
+              <Box className="py-2 text-center text-white/70">You are not a member of any projects.</Box>
             )}
 
             {myProjects.map((p) => {
@@ -311,253 +326,220 @@ const Settings: React.FC = () => {
               const projProjectionState = projectionStatus[projId] || "idle";
 
               return (
-                <div key={projId} className="p-0 overflow-hidden card">
-                  {/* Row header */}
-                  <button
-                    onClick={() => toggleExpand(projId, p)}
-                    className="flex items-center w-full gap-3 px-3 py-3 text-left transition hover:bg-white/5"
-                    aria-expanded={expanded}
-                  >
-                    <div className="flex items-center flex-1 min-w-0 gap-3">
-                      <Avatar
-                        src={normalizeLogoUrl(p.projects.logo_url) || ""}
-                        fallback={p.projects.name?.[0] ?? "?"}
-                        size={48}
-                      />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className="font-semibold truncate">{p.projects.name}</div>
-                          {owned && (
-                            <span className="inline-flex items-center rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-300/20 px-2 py-0.5 text-[11px] font-semibold">
-                              Owner
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight
-                      className={`h-5 w-5 text-white/70 transition-transform ${expanded ? "rotate-90" : ""}`}
-                    />
-                  </button>
+                <Card key={projId} variant="outlined" className="overflow-hidden">
+                  <CardContent className="!p-0">
+                    <Button
+                      onClick={() => toggleExpand(projId, p)}
+                      className="!w-full !justify-between !rounded-none !px-3 !py-3 hover:!bg-white/10"
+                    >
+                      <Box display="flex" alignItems="center" gap={1.5} minWidth={0} flex={1}>
+                        <Avatar
+                          src={normalizeLogoUrl(p.projects.logo_url) || undefined}
+                          alt=""
+                          sx={{ width: 48, height: 48, borderRadius: 2 }}
+                        />
+                        <Box minWidth={0} textAlign="left">
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Typography className="truncate" fontWeight={600}>
+                              {p.projects.name}
+                            </Typography>
+                            {owned && <Chip size="small" label="Owner" color="success" variant="outlined" />}
+                          </Box>
+                        </Box>
+                      </Box>
+                      <Typography className={`transition-transform ${expanded ? "rotate-90" : ""}`}>›</Typography>
+                    </Button>
 
-                  {/* Expanded content */}
-                  {expanded && (
-                    <>
-                      <div className="h-px bg-white/10" />
-                      <div className="p-4 space-y-4 sm:p-5">
-                        {/* Logo + actions */}
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <Avatar
-                              src={normalizeLogoUrl(p.projects.logo_url) || ""}
-                              fallback={p.projects.name?.[0] ?? "?"}
-                              size={72}
-                            />
-                            <button
-                              className="btn btn-outline"
-                              disabled={!owned || logoUploading}
-                              onClick={() => handleLogoUpload(projId, owned)}
-                            >
-                              <Camera className="w-4 h-4" />
-                              {logoUploading ? "Uploading..." : "Change Logo"}
-                            </button>
-                          </div>
-                          {owned && (
-                            <button
-                              className="btn btn-outline text-amber-200"
-                              onClick={() => handleTransferOwnership(projId)}
-                              title="Transfer Ownership"
-                            >
-                              <ShieldAlert className="w-4 h-4" />
-                              Transfer Ownership
-                            </button>
-                          )}
-                        </div>
+                    {expanded && (
+                      <>
+                        <Divider className="!border-white/10" />
+                        <Box className="p-4 space-y-4 sm:p-5">
+                          <Box display="flex" alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap">
+                            <Stack direction="row" spacing={2} alignItems="center">
+                              <Avatar
+                                src={normalizeLogoUrl(p.projects.logo_url) || undefined}
+                                alt=""
+                                sx={{ width: 72, height: 72, borderRadius: 2 }}
+                              />
+                              <Button
+                                variant="outlined"
+                                startIcon={<Camera size={18} />}
+                                disabled={!owned || logoUploading}
+                                onClick={() => handleLogoUpload(projId, owned)}
+                              >
+                                {logoUploading ? "Uploading..." : "Change Logo"}
+                              </Button>
+                            </Stack>
+                            {owned && (
+                              <Button
+                                variant="outlined"
+                                color="warning"
+                                startIcon={<ShieldAlert size={18} />}
+                                onClick={() => handleTransferOwnership(projId)}
+                              >
+                                Transfer Ownership
+                              </Button>
+                            )}
+                          </Box>
 
-                        {/* Project name */}
-                        <div>
-                          <label className="label">Project Name</label>
-                          <input
-                            className="input"
-                            value={editName[projId] ?? ""}
-                            disabled={!owned}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setEditName((prev) => ({ ...prev, [projId]: val }));
-                            }}
-                            onFocus={() => {
-                              if (owned) setNameFocused((prev) => ({ ...prev, [projId]: true }));
-                            }}
-                            onBlur={() => {
-                              const val = editName[projId] ?? "";
-                              scheduleNameSave(projId, val, owned);
-                              setNameFocused((prev) => ({ ...prev, [projId]: false }));
-                            }}
-                            placeholder="Enter project name"
-                          />
-                          <p className="help">
-                            {!owned
-                              ? "Read-only"
-                              : nameSyncing[projId]
-                              ? "Saving..."
-                              : nameFocused[projId]
-                              ? "Click off to save"
-                              : "Up to date"}
-                          </p>
-                        </div>
-
-                        <div className="h-px bg-white/10" />
-
-                        {/* Projection inputs */}
-                        <div className="flex flex-col gap-3 sm:flex-row">
-                          <div className="flex-1">
-                            <label className="label">Active Valuation (USD)</label>
-                            <input
-                              type="number"
-                              className="input"
+                          <Box>
+                            <TextField
+                              label="Project Name"
+                              fullWidth
+                              value={editName[projId] ?? ""}
                               disabled={!owned}
-                              value={editValuation[projId] ?? ""}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setEditValuation((prev) => ({ ...prev, [projId]: val }));
-                                if (owned) setProjectionDirty((prev) => ({ ...prev, [projId]: true }));
+                              onFocus={() => owned && setNameFocused((prev) => ({ ...prev, [projId]: true }))}
+                              onBlur={() => {
+                                const val = editName[projId] ?? "";
+                                scheduleNameSave(projId, val, owned);
+                                setNameFocused((prev) => ({ ...prev, [projId]: false }));
                               }}
-                              placeholder="e.g. 2500000"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <label className="label">Work Hours Remaining</label>
-                            <input
-                              type="number"
-                              className="input"
-                              disabled={!owned}
-                              value={editHours[projId] ?? ""}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setEditHours((prev) => ({ ...prev, [projId]: val }));
-                                if (owned) setProjectionDirty((prev) => ({ ...prev, [projId]: true }));
-                              }}
-                              placeholder="e.g. 1200"
-                            />
-                          </div>
-                        </div>
-
-                        {owned && (
-                          <div className="flex items-center gap-2">
-                            <button
-                              className="btn btn-primary"
-                              disabled={
-                                projectionSyncing[projId] ||
-                                !projectionDirty[projId] ||
-                                !editValuation[projId] ||
-                                !editHours[projId]
+                              onChange={(e) => setEditName((prev) => ({ ...prev, [projId]: e.target.value }))}
+                              helperText={
+                                !owned
+                                  ? "Read-only"
+                                  : nameSyncing[projId]
+                                  ? "Saving..."
+                                  : nameFocused[projId]
+                                  ? "Click off to save"
+                                  : "Up to date"
                               }
-                              onClick={() => saveProjection(projId, owned)}
-                            >
-                              {projectionSyncing[projId] ? "Saving..." : "Save Projection"}
-                            </button>
-                            <span className="text-xs text-white/60">
-                              {projectionDirty[projId]
-                                ? "Click save to persist changes"
-                                : projProjectionState === "saved"
-                                ? "Projection up to date"
-                                : ""}
-                            </span>
-                          </div>
-                        )}
+                            />
+                          </Box>
 
-                        <div className="flex flex-wrap gap-2">
-                          {!owned && (
-                            <button
-                              className="text-red-200 btn btn-outline"
-                              onClick={() => handleLeaveProject(projId)}
-                            >
-                              <LogOut className="w-4 h-4" />
-                              Leave Project
-                            </button>
+                          <Divider className="!border-white/10" />
+
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                              <TextField
+                                label="Active Valuation (USD)"
+                                type="number"
+                                fullWidth
+                                disabled={!owned}
+                                value={editValuation[projId] ?? ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEditValuation((prev) => ({ ...prev, [projId]: val }));
+                                  if (owned) setProjectionDirty((prev) => ({ ...prev, [projId]: true }));
+                                }}
+                              />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                              <TextField
+                                label="Work Hours Remaining"
+                                type="number"
+                                fullWidth
+                                disabled={!owned}
+                                value={editHours[projId] ?? ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEditHours((prev) => ({ ...prev, [projId]: val }));
+                                  if (owned) setProjectionDirty((prev) => ({ ...prev, [projId]: true }));
+                                }}
+                              />
+                            </Grid>
+                          </Grid>
+
+                          {owned && (
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Button
+                                variant="contained"
+                                onClick={() => saveProjection(projId, owned)}
+                                disabled={
+                                  projectionSyncing[projId] ||
+                                  !projectionDirty[projId] ||
+                                  !editValuation[projId] ||
+                                  !editHours[projId]
+                                }
+                              >
+                                {projectionSyncing[projId] ? "Saving..." : "Save Projection"}
+                              </Button>
+                              <Typography variant="caption" color="text.secondary">
+                                {projectionDirty[projId]
+                                  ? "Click save to persist changes"
+                                  : projProjectionState === "saved"
+                                  ? "Projection up to date"
+                                  : ""}
+                              </Typography>
+                            </Stack>
                           )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+
+                          {!owned && (
+                            <Button variant="outlined" color="error" onClick={() => handleLeaveProject(projId)}>
+                              <LogOut size={18} />
+                              &nbsp;Leave Project
+                            </Button>
+                          )}
+                        </Box>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
               );
             })}
-          </div>
+          </Stack>
 
-          {/* Pending invites */}
-          <div className="my-8">
-            <div className="flex items-center gap-2 mb-3">
-              <UserPlus className="w-5 h-5 text-white/80" />
-              <h2 className="text-xl font-bold">Pending Invites</h2>
-            </div>
+          <Box mt={6}>
+            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+              <UserPlus size={20} />
+              <Typography variant="h6">Pending Invites</Typography>
+            </Stack>
+
             {pendingInvites.length === 0 ? (
-              <div className="py-2 text-center text-white/70">No pending invitations.</div>
+              <Box className="py-2 text-center text-white/70">No pending invitations.</Box>
             ) : (
-              <div className="space-y-3">
+              <Stack spacing={2}>
                 {pendingInvites.map((invite) => (
-                  <div key={invite.project_id} className="flex items-center justify-between gap-3 p-4 card">
-                    <div className="flex items-center min-w-0 gap-3">
-                      <Avatar
-                        src={normalizeLogoUrl(invite.projects.logo_url) || ""}
-                        fallback={invite.projects.name?.[0] ?? "?"}
-                        size={48}
-                      />
-                      <div className="min-w-0">
-                        <div className="font-semibold truncate">{invite.projects.name}</div>
-                        <div className="text-xs text-white/70">You’ve been invited to join this project.</div>
-                      </div>
-                    </div>
-                    <button className="btn btn-primary" onClick={() => handleJoinProject(invite.project_id)}>
-                      Join Project
-                    </button>
-                  </div>
+                  <Card key={invite.project_id} variant="outlined">
+                    <CardContent className="!py-3">
+                      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                        <Stack direction="row" spacing={2} alignItems="center" minWidth={0}>
+                          <Avatar
+                            src={normalizeLogoUrl(invite.projects.logo_url) || undefined}
+                            alt=""
+                            sx={{ width: 48, height: 48, borderRadius: 2 }}
+                          />
+                          <Box minWidth={0}>
+                            <Typography fontWeight={600} className="truncate">
+                              {invite.projects.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              You’ve been invited to join this project.
+                            </Typography>
+                          </Box>
+                        </Stack>
+                        <Button variant="contained" onClick={() => handleJoinProject(invite.project_id)}>
+                          Join Project
+                        </Button>
+                      </Stack>
+                    </CardContent>
+                  </Card>
                 ))}
-              </div>
+              </Stack>
             )}
 
-            <div className="mt-6 text-center">
-              <button className="btn btn-primary" onClick={() => navigate("/add-project")}>
-                <Plus className="w-4 h-4" />
+            <Box textAlign="center" mt={3}>
+              <Button variant="contained" startIcon={<Plus size={18} />} onClick={() => navigate("/add-project")}>
                 New Project
-              </button>
-            </div>
-          </div>
+              </Button>
+            </Box>
+          </Box>
 
-          <div className="h-px my-6 bg-white/10" />
+          <Divider className="!border-white/10 my-6" />
 
-          {/* Profile */}
-          <div>
-            <h2 className="mb-2 text-2xl font-bold">Profile</h2>
-            <div className="text-white/85">Signed in as {user.email}</div>
-            <button className="mt-3 text-red-200 btn btn-outline" onClick={signOut}>
-              <LogOut className="w-4 h-4" />
+          <Box>
+            <Typography variant="h5" fontWeight={800} gutterBottom>
+              Profile
+            </Typography>
+            <Typography>Signed in as {user.email}</Typography>
+            <Button variant="outlined" color="error" sx={{ mt: 2 }} onClick={signOut} startIcon={<LogOut size={18} />}>
               Sign Out
-            </button>
-          </div>
+            </Button>
+          </Box>
         </>
       )}
-    </div>
+    </Container>
   );
 };
-
-function Avatar({ src, fallback, size = 48 }: { src?: string; fallback: string; size?: number }) {
-  return src ? (
-    <img
-      src={src}
-      alt="Project logo"
-      className="object-cover rounded-xl"
-      style={{ width: size, height: size }}
-      referrerPolicy="no-referrer"
-    />
-  ) : (
-    <div
-      className="grid font-semibold place-items-center rounded-xl bg-white/10 text-white/80"
-      style={{ width: size, height: size }}
-    >
-      {fallback}
-    </div>
-  );
-}
 
 export default Settings;

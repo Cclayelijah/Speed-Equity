@@ -4,6 +4,17 @@ import toast from "react-hot-toast";
 import type { Database } from "../../types/supabase";
 import FileUpload from "../../components/FileUpload";
 import { useNavigate } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Container,
+  Grid,
+  TextField,
+  Typography,
+  Divider,
+} from "@mui/material";
 
 type ProjectsTable = Database["public"]["Tables"]["projects"]["Row"];
 const LOGO_BUCKET = "project-logos";
@@ -153,13 +164,7 @@ const AddProject = ({ ownerId, ownerEmail }: { ownerId: string; ownerEmail: stri
       toast.success("Project created!");
       navigate("/dashboard");
       if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
-      setForm({
-        name: "",
-        initialValuation: "",
-        workHoursRemaining: "",
-        logoFile: null,
-        logoPreview: null,
-      });
+      setForm({ name: "", initialValuation: "", workHoursRemaining: "", logoFile: null, logoPreview: null });
     } catch (e: any) {
       toast.error(e.message || "Failed to create project");
     } finally {
@@ -168,102 +173,102 @@ const AddProject = ({ ownerId, ownerEmail }: { ownerId: string; ownerEmail: stri
   };
 
   return (
-    <div className="w-full max-w-xl px-4 py-8 mx-auto">
-      <div className="mb-6">
-        <div className="inline-flex items-center gap-2 text-xs font-semibold text-white/70 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
-          <span className="w-2 h-2 rounded-full bg-cyan-400" />
-          New project
-        </div>
-        <h1 className="mt-3 text-3xl font-black tracking-tight">Create a New Project</h1>
-        <p className="mt-1 text-white/70">Set the basics now. You can change details later in Settings.</p>
-      </div>
+    <Container maxWidth="sm" className="px-4 py-6">
+      <Box mb={2}>
+        <Card className="relative mb-4 overflow-hidden">
+          <Box className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-rose-400 to-cyan-400" />
+          <CardContent>
+            <Typography variant="h4" fontWeight={900}>
+              Create a New Project
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Set the basics now. You can change details later in Settings.
+            </Typography>
+          </CardContent>
+        </Card>
+      </Box>
 
-      <form onSubmit={handleSubmit} className="overflow-hidden card">
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-rose-400 to-cyan-400" />
-        <div className="p-5 space-y-4 sm:p-6">
-          {/* Project Name */}
-          <div>
-            <label className="label">Project Name</label>
-            <input
-              className="input"
-              value={form.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-              placeholder="e.g. Sweat Equity OS"
-              required
-              disabled={loading}
-            />
-          </div>
-
-          {/* Numbers */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="label">Initial Valuation (optional)</label>
-              <input
+      <Card component="form" onSubmit={handleSubmit} className="relative overflow-hidden">
+        <Box className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-rose-400 to-cyan-400" />
+        <CardContent>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                label="Project Name"
+                fullWidth
+                value={form.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                placeholder="e.g. Sweat Equity OS"
+                required
+                disabled={loading}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Initial Valuation (optional)"
                 type="number"
-                inputMode="decimal"
-                className="input"
+                fullWidth
                 value={form.initialValuation}
                 onChange={(e) => handleChange("initialValuation", e.target.value)}
                 placeholder="e.g. 2500000"
                 disabled={loading}
+                helperText="USD"
               />
-              <p className="help">USD</p>
-            </div>
-            <div>
-              <label className="label">Work Hours Remaining (optional)</label>
-              <input
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Work Hours Remaining (optional)"
                 type="number"
-                inputMode="numeric"
-                className="input"
+                fullWidth
                 value={form.workHoursRemaining}
                 onChange={(e) => handleChange("workHoursRemaining", e.target.value)}
                 placeholder="e.g. 1200"
                 disabled={loading}
+                helperText="Estimated engineering hours to completion"
               />
-              <p className="help">Estimated engineering hours to completion</p>
-            </div>
-          </div>
-
-          {/* Logo */}
-          <div>
-            <label className="label">Project Logo (optional)</label>
-            <FileUpload
-              onUploadComplete={(payload: any) => {
-                const file = Array.isArray(payload) ? payload[0] : payload;
-                if (file instanceof File) {
-                  handleLogoPick(file);
-                } else if (typeof file === "string") {
-                  handleLogoPick(null);
-                  setForm((f) => ({ ...f, logoPreview: file, logoFile: null }));
-                } else {
-                  toast.error("Unsupported upload result");
-                }
-              }}
-            />
-            {form.logoPreview && (
-              <div className="flex items-center gap-3 mt-3">
-                <img
-                  src={form.logoPreview}
-                  alt="Logo preview"
-                  className="object-cover rounded-xl ring-1 ring-white/15 bg-white/5"
-                  style={{ width: 56, height: 56 }}
-                />
-                {form.logoFile && (
-                  <span className="text-xs truncate text-white/70">{form.logoFile.name}</span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="pt-2">
-            <button type="submit" className="w-full btn btn-primary" disabled={loading}>
-              {loading ? "Creating..." : "Create Project"}
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Project Logo (optional)
+              </Typography>
+              <FileUpload
+                onUploadComplete={(payload: any) => {
+                  const file = Array.isArray(payload) ? payload[0] : payload;
+                  if (file instanceof File) {
+                    handleLogoPick(file);
+                  } else if (typeof file === "string") {
+                    handleLogoPick(null);
+                    setForm((f) => ({ ...f, logoPreview: file, logoFile: null }));
+                  } else {
+                    toast.error("Unsupported upload result");
+                  }
+                }}
+              />
+              {form.logoPreview && (
+                <Box mt={2} display="flex" alignItems="center" gap={2}>
+                  <img
+                    src={form.logoPreview}
+                    alt="Logo preview"
+                    className="rounded-xl"
+                    style={{ width: 56, height: 56, objectFit: "cover" }}
+                  />
+                  {form.logoFile && (
+                    <Typography variant="caption" color="text.secondary" className="truncate">
+                      {form.logoFile.name}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+            </Grid>
+            <Grid item xs={12}>
+              <Button type="submit" variant="contained" fullWidth disabled={loading}>
+                {loading ? "Creating..." : "Create Project"}
+              </Button>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+    </Container>
   );
 };
 

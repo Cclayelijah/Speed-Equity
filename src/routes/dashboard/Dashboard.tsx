@@ -1,11 +1,27 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Settings, CheckCircle2, User2, Users2, ChevronDown } from "lucide-react";
+import { Settings, CheckCircle2, User2, Users2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../components/AuthProvider";
 import type { Database } from "../../types/supabase";
 import DashboardReminder from "./DashboardReminder";
-// Keep charts (rendered inside Tailwind cards)
+import {
+  Box,
+  Card,
+  CardContent,
+  Container,
+  Grid,
+  Stack,
+  Typography,
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Chip,
+  Skeleton,
+  IconButton,
+} from "@mui/material";
 import { LineChart, BarChart } from "@mui/x-charts";
 
 type DailyEntryRow = Database["public"]["Tables"]["daily_entries"]["Row"];
@@ -20,9 +36,6 @@ interface DashboardMetrics {
   active_valuation: number | null;
   active_work_hours_until_completion: number | null;
   implied_hour_value: number | null;
-  team_hours_7?: number | null;
-  my_hours_7?: number | null;
-  updated_at?: string | null;
 }
 
 const Dashboard: React.FC = () => {
@@ -48,14 +61,12 @@ const Dashboard: React.FC = () => {
     if (!user) return;
     (async () => {
       setLoadingProjects(true);
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("project_members")
         .select("project_id, projects(name, logo_url)")
         .eq("user_id", user.id);
-      if (!error) {
-        setProjects(data ?? []);
-        if (data && data.length > 0) setSelectedProjectId((prev) => prev || data[0].project_id);
-      }
+      setProjects(data ?? []);
+      if (data && data.length > 0) setSelectedProjectId((prev) => prev || data[0].project_id);
       setLoadingProjects(false);
     })();
   }, [user]);
@@ -128,9 +139,7 @@ const Dashboard: React.FC = () => {
         .eq("user_id", user.id)
         .maybeSingle();
       const pct = memberRow?.equity ?? null;
-      if (!cancelled) {
-        setEquityPct(pct);
-      }
+      if (!cancelled) setEquityPct(pct);
 
       const { data: hoursRows } = await supabase
         .from("daily_entries")
@@ -172,16 +181,14 @@ const Dashboard: React.FC = () => {
           totalUserHours == null || equityPct == null
             ? "—"
             : "$" +
-              sweatEquityEarnedValue.toLocaleString(undefined, {
-                maximumFractionDigits: 0,
-              }),
-        loading: loadingPrimary || loadingMetrics,
+              sweatEquityEarnedValue.toLocaleString(undefined, { maximumFractionDigits: 0 }),
         helper:
           totalUserHours == null
             ? ""
             : `${totalUserHours}h × $${implied.toLocaleString(undefined, {
                 maximumFractionDigits: 2,
               })} × ${equityPct || 0}%`,
+        loading: loadingPrimary || loadingMetrics,
       },
       {
         label: `Completed Project Equity (${equityPct ?? 0}%)`,
@@ -192,9 +199,9 @@ const Dashboard: React.FC = () => {
               potentialEquityValue.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               }),
-        loading: loadingPrimary || loadingMetrics,
         helper:
           metrics?.active_valuation == null ? "" : `$${metrics.active_valuation.toLocaleString()} × ${equityPct || 0}%`,
+        loading: loadingPrimary || loadingMetrics,
       },
       {
         label: "Implied $/Hour",
@@ -202,33 +209,29 @@ const Dashboard: React.FC = () => {
           metrics?.implied_hour_value == null
             ? "—"
             : "$" +
-              metrics.implied_hour_value.toLocaleString(undefined, {
+              (metrics.implied_hour_value || 0).toLocaleString(undefined, {
                 maximumFractionDigits: 2,
               }),
-        loading: loadingMetrics,
         helper: "",
+        loading: loadingMetrics,
       },
       {
         label: "My Total Hours",
         value:
           totalUserHours == null
             ? "—"
-            : totalUserHours.toLocaleString(undefined, {
-                maximumFractionDigits: 1,
-              }) + "h",
-        loading: loadingPrimary,
+            : totalUserHours.toLocaleString(undefined, { maximumFractionDigits: 1 }) + "h",
         helper: "",
+        loading: loadingPrimary,
       },
       {
         label: "My Contribution",
         value:
           totalTeamHours == null
             ? "—"
-            : myContributionPct.toLocaleString(undefined, {
-                maximumFractionDigits: 1,
-              }) + "%",
-        loading: loadingPrimary,
+            : myContributionPct.toLocaleString(undefined, { maximumFractionDigits: 1 }) + "%",
         helper: totalTeamHours == null ? "" : `${totalUserHours ?? 0}h of ${totalTeamHours}h`,
+        loading: loadingPrimary,
       },
     ],
     [
@@ -245,230 +248,250 @@ const Dashboard: React.FC = () => {
     ]
   );
 
-  const toggleView = useCallback(() => {
-    setView((v) => (v === "impact" ? "team" : "impact"));
-  }, []);
-
   return (
-    <div className="px-4 mx-auto max-w-7xl sm:px-6">
+    <Container maxWidth="lg" className="px-4 py-6">
       <DashboardReminder />
 
-      {/* Header Card */}
-      <div className="relative mb-6 overflow-hidden card">
-        <div className="absolute inset-x-0 h-px -top-px bg-gradient-to-r from-fuchsia-500 via-rose-400 to-cyan-400" />
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          {/* Live Data */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center ">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold text-white/70 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Live dashboard
-            </div>
-          </div>
-
-          {/* Actions + Project select */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {/* Project select */}
-            <div className="relative group">
-              {loadingProjects ? (
-                <div className="h-10 w-44 rounded-xl bg-white/10 animate-pulse" />
-              ) : (
-                <select
-                  className="
-                    input appearance-none !h-10 !py-2.5 pr-12 min-w-[14rem] p-2 rounded-md
-                    bg-white/10 text-white placeholder-white/60
-                    border-white/25 hover:border-white/35
-                    focus:border-white/50 focus:ring-2 focus:ring-fuchsia-400/30
-                    transition
-                  "
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  title="Choose project"
-                >
-                  {projects.map((p) => (
-                    <option key={p.project_id} value={p.project_id}>
-                      {p.projects.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {/* Divider before caret */}
-              <span className="absolute w-px h-6 -translate-y-1/2 pointer-events-none right-9 top-1/2 bg-white/12 group-focus-within:bg-white/20" />
-              {/* Caret */}
-              <ChevronDown
-                className="absolute w-4 h-4 -translate-y-1/2 pointer-events-none right-3 top-1/2 text-white/80 group-hover:text-white"
+      <Card className="relative mb-4 overflow-hidden">
+        <Box className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-rose-400 to-cyan-400" />
+        <CardContent>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md="auto">
+              <Chip
+                label="Live dashboard"
+                variant="outlined"
+                className="text-white/80 border-white/20"
               />
-            </div>
+            </Grid>
+            <Grid item xs>
+              <Typography variant="h4" fontWeight={900}>
+                Dashboard
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md="auto">
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                <Button
+                  variant="outlined"
+                  onClick={() => setView((v) => (v === "impact" ? "team" : "impact"))}
+                  startIcon={view === "impact" ? <User2 size={18} /> : <Users2 size={18} />}
+                >
+                  {view === "impact" ? "My Impact" : "Team Progress"}
+                </Button>
 
-            {/* View toggle */}
-            <button
-              title={
-                view === "impact"
-                  ? "Showing My Impact – switch to Team Progress"
-                  : "Showing Team Progress – switch to My Impact"
-              }
-              onClick={toggleView}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-2xl ring-1 ring-inset ring-white/15 bg-white/5 hover:bg-white/10"
-            >
-              {view === "impact" ? (
-                <>
-                  <User2 className="w-4 h-4" /> My Impact
-                </>
-              ) : (
-                <>
-                  <Users2 className="w-4 h-4" /> Team Progress
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
+                <FormControl size="small" sx={{ minWidth: 220 }}>
+                  <InputLabel id="proj-label">Project</InputLabel>
+                  <Select
+                    labelId="proj-label"
+                    label="Project"
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value as string)}
+                    disabled={loadingProjects}
+                  >
+                    {loadingProjects ? (
+                      <MenuItem value="">
+                        <Skeleton width={120} />
+                      </MenuItem>
+                    ) : (
+                      projects.map((p) => (
+                        <MenuItem key={p.project_id} value={p.project_id}>
+                          {p.projects.name}
+                        </MenuItem>
+                      ))
+                    )}
+                  </Select>
+                </FormControl>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-3 mb-6 sm:grid-cols-2 xl:grid-cols-5 sm:gap-4">
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate("/settings")}
+                  startIcon={<Settings size={18} />}
+                >
+                  Settings
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate("/checkin")}
+                  startIcon={<CheckCircle2 size={18} />}
+                >
+                  New Check-In
+                </Button>
+              </Stack>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      <Grid container spacing={2} className="mb-1">
         {cards.map((c) => (
-          <div key={c.label} className="relative p-4 overflow-hidden card sm:p-5">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500/70 via-rose-400/70 to-cyan-400/70" />
-            <div className="text-[10px] tracking-wider uppercase font-semibold text-white/60 mb-1">
-              {c.label}
-            </div>
-            {c.loading ? (
-              <div className="w-2/3 rounded h-7 bg-white/10 animate-pulse" />
-            ) : (
-              <div className="text-xl font-bold">{c.value}</div>
-            )}
-            {!c.loading && c.helper && (
-              <div className="text-xs text-white/60 mt-1.5">{c.helper}</div>
-            )}
-          </div>
+          <Grid key={c.label} item xs={12} sm={6} lg={2.4 as any}>
+            <Card className="relative overflow-hidden">
+              <Box className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500/70 via-rose-400/70 to-cyan-400/70" />
+              <CardContent>
+                <Typography variant="overline" color="text.secondary">
+                  {c.label}
+                </Typography>
+                <Typography variant="h5" fontWeight={800}>
+                  {c.loading ? <Skeleton width={120} /> : c.value}
+                </Typography>
+                {!c.loading && c.helper && (
+                  <Typography variant="caption" color="text.secondary">
+                    {c.helper}
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
         ))}
-      </div>
+      </Grid>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 gap-4 mb-6 lg:grid-cols-12">
-        <div className="p-4 lg:col-span-7 card sm:p-5">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold">
-              {view === "impact" ? "My Hours (Last 7 Days)" : "Team Hours (Last 7 Days)"}
-            </h3>
-          </div>
-          {loadingEntries ? (
-            <div className="h-[260px] rounded bg-white/10 animate-pulse" />
-          ) : hoursSeries.length === 0 ? (
-            <div className="h-[260px] grid place-items-center text-white/60">No data.</div>
-          ) : (
-            <LineChart
-              height={260}
-              series={[
-                {
-                  data: hoursSeries.map((d) => (view === "impact" ? d.my : d.team)),
-                  label: "Hours",
-                  area: true,
-                  curve: "monotoneX",
-                  color: view === "impact" ? "#22d3ee" : "#ec4899",
-                },
-              ]}
-              xAxis={[
-                {
-                  scaleType: "point",
-                  data: hoursSeries.map((d) => d.date.slice(5)),
-                },
-              ]}
-              margin={{ left: 50, right: 10, top: 30, bottom: 30 }}
-            />
-          )}
-        </div>
+      <Grid container spacing={2} className="mb-2">
+        <Grid item xs={12} lg={7}>
+          <Card>
+            <CardContent>
+              <Typography variant="subtitle1" gutterBottom>
+                {view === "impact" ? "My Hours (Last 7 Days)" : "Team Hours (Last 7 Days)"}
+              </Typography>
+              {loadingEntries ? (
+                <Skeleton variant="rounded" height={260} />
+              ) : hoursSeries.length === 0 ? (
+                <Box className="h-[260px] grid place-items-center text-white/60">No data.</Box>
+              ) : (
+                <LineChart
+                  height={260}
+                  series={[
+                    {
+                      data: hoursSeries.map((d) => (view === "impact" ? d.my : d.team)),
+                      label: "Hours",
+                      area: true,
+                      curve: "monotoneX",
+                      color: view === "impact" ? "#22d3ee" : "#ec4899",
+                    },
+                  ]}
+                  xAxis={[
+                    {
+                      scaleType: "point",
+                      data: hoursSeries.map((d) => d.date.slice(5)),
+                    },
+                  ]}
+                  margin={{ left: 50, right: 10, top: 30, bottom: 30 }}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} lg={5}>
+          <Card>
+            <CardContent>
+              <Typography variant="subtitle1" gutterBottom>
+                Hours Distribution (Last 7 Days)
+              </Typography>
+              {loadingEntries ? (
+                <Skeleton variant="rounded" height={260} />
+              ) : hoursSeries.length === 0 ? (
+                <Box className="h-[260px] grid place-items-center text-white/60">No data.</Box>
+              ) : (
+                <BarChart
+                  height={260}
+                  series={[
+                    { data: hoursSeries.map((d) => d.my), label: "My", color: "#22d3ee" },
+                    {
+                      data: hoursSeries.map((d) => d.team - d.my),
+                      label: "Others",
+                      color: "#f59e0b",
+                      stack: "a",
+                    },
+                  ]}
+                  xAxis={[
+                    {
+                      scaleType: "band",
+                      data: hoursSeries.map((d) => d.date.slice(5)),
+                    },
+                  ]}
+                  margin={{ left: 40, right: 10, top: 30, bottom: 30 }}
+                  slotProps={{ legend: { hidden: true } }}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-        <div className="p-4 lg:col-span-5 card sm:p-5">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold">Hours Distribution (Last 7 Days)</h3>
-          </div>
-          {loadingEntries ? (
-            <div className="h-[260px] rounded bg-white/10 animate-pulse" />
-          ) : hoursSeries.length === 0 ? (
-            <div className="h-[260px] grid place-items-center text-white/60">No data.</div>
-          ) : (
-            <BarChart
-              height={260}
-              series={[
-                { data: hoursSeries.map((d) => d.my), label: "My", color: "#22d3ee" },
-                { data: hoursSeries.map((d) => d.team - d.my), label: "Others", color: "#f59e0b", stack: "a" },
-              ]}
-              xAxis={[
-                {
-                  scaleType: "band",
-                  data: hoursSeries.map((d) => d.date.slice(5)),
-                },
-              ]}
-              margin={{ left: 40, right: 10, top: 30, bottom: 30 }}
-              slotProps={{ legend: { hidden: true } }}
-            />
-          )}
-        </div>
-      </div>
+      <Card className="mb-6">
+        <CardContent>
+          <Grid container alignItems="flex-end" justifyContent="space-between" spacing={2}>
+            <Grid item>
+              <Typography variant="h6">
+                {view === "impact" ? "My Check-In History" : "Team Check-In History"}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Showing the five most recent daily entries.
+              </Typography>
+            </Grid>
+            <Grid item>
+              <Stack direction="row" spacing={1}>
+                <Button variant="outlined" onClick={() => navigate("/checkin")}>
+                  New Check-In
+                </Button>
+                <Button variant="contained" onClick={() => navigate("/checkins")}>
+                  View More
+                </Button>
+              </Stack>
+            </Grid>
+          </Grid>
 
-      {/* Recent Entries */}
-      <div className="p-5 mb-8 card sm:p-6">
-        <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h3 className="text-lg font-bold">
-              {view === "impact" ? "My Check-In History" : "Team Check-In History"}
-            </h3>
-            <div className="text-xs text-white/60 mt-0.5">
-              Showing the five most recent daily entries.
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button className="btn btn-outline" onClick={() => navigate("/checkin")}>
-              New Check-In
-            </button>
-            <button className="btn btn-primary" onClick={() => navigate("/checkins")}>
-              View More
-            </button>
-          </div>
-        </div>
-
-        {loadingEntries ? (
-          <div>
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-14 rounded-xl bg-white/10 animate-pulse mb-2.5" />
-            ))}
-          </div>
-        ) : entries.length === 0 ? (
-          <div className="py-6 text-center text-white/70">No entries found.</div>
-        ) : (
-          <ul className="space-y-2">
-            {entries.map((entry) => (
-              <li key={entry.id} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <div className="grid text-sm font-semibold rounded-full h-9 w-9 bg-white/10 place-items-center">
-                    {(entry.created_by || "U").slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="text-sm font-semibold">
-                        {entry.created_by === user?.id ? "You" : entry.created_by}
-                      </div>
-                      <span className="inline-flex items-center rounded-full bg-cyan-400/15 text-cyan-200 border border-cyan-300/20 px-2 py-0.5 text-[11px] font-semibold">
-                        {(entry.hours_worked ?? 0)}h
-                      </span>
-                      {entry.hours_wasted ? (
-                        <span className="inline-flex items-center rounded-full bg-amber-400/15 text-amber-200 border border-amber-300/20 px-2 py-0.5 text-[11px] font-semibold">
-                          Lost {entry.hours_wasted}h
-                        </span>
-                      ) : null}
-                      <span className="text-xs text-white/60">{entry.entry_date}</span>
-                    </div>
-                    <div className="text-sm mt-1.5 whitespace-pre-line text-white/85">
-                      {entry.completed || "(no summary)"}
-                    </div>
-                  </div>
-                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
+          <Box mt={2}>
+            {loadingEntries ? (
+              <Stack spacing={1.5}>
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} variant="rounded" height={56} />
+                ))}
+              </Stack>
+            ) : entries.length === 0 ? (
+              <Box className="py-6 text-center text-white/70">No entries found.</Box>
+            ) : (
+              <Stack spacing={1.5}>
+                {entries.map((entry) => (
+                  <Card key={entry.id} variant="outlined">
+                    <CardContent className="!py-3 !px-3">
+                      <Stack direction="row" spacing={2}>
+                        <Box className="grid text-sm font-semibold h-9 w-9 rounded-xl bg-white/10 place-items-center">
+                          {(entry.created_by || "U").slice(0, 1).toUpperCase()}
+                        </Box>
+                        <Box flex={1} minWidth={0}>
+                          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+                            <Typography fontWeight={600}>
+                              {entry.created_by === user?.id ? "You" : entry.created_by}
+                            </Typography>
+                            <Chip size="small" label={`${entry.hours_worked ?? 0}h`} color="info" variant="outlined" />
+                            {entry.hours_wasted ? (
+                              <Chip
+                                size="small"
+                                label={`Lost ${entry.hours_wasted}h`}
+                                color="warning"
+                                variant="outlined"
+                              />
+                            ) : null}
+                            <Typography variant="caption" color="text.secondary">
+                              {entry.entry_date}
+                            </Typography>
+                          </Stack>
+                          <Typography variant="body2" className="mt-1.5 whitespace-pre-line">
+                            {entry.completed || "(no summary)"}
+                          </Typography>
+                        </Box>
+                        <IconButton size="small" disabled>
+                          {/* reserved for future actions */}
+                        </IconButton>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Stack>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+    </Container>
   );
 };
 
