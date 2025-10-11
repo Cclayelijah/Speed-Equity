@@ -14,7 +14,7 @@ const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 root.render(
   <React.StrictMode>
     {/* Prefer CSS layers when available */}
-    <StyledEngineProvider enableCssLayer>
+    <StyledEngineProvider enableCssLayer injectFirst>
       <ThemeProvider theme={theme}>
         <BrowserRouter>
           <AuthProvider>

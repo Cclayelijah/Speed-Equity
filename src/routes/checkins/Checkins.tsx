@@ -1,32 +1,27 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
-import { useAuth } from "../../components/AuthProvider";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/AuthProvider";
 import toast from "react-hot-toast";
-import type { Database } from "../../types/supabase";
+import type { Database } from "@/types/supabase";
 import { ArrowLeft, PlusCircle, Pencil, Trash2 } from "lucide-react";
 import {
-  Box,
-  Button,
+  Container,
   Card,
   CardContent,
-  Chip,
-  Container,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
-  IconButton,
-  MenuItem,
-  Select,
-  Skeleton,
-  Stack,
   TextField,
-  Typography,
-  FormControl,
-  InputLabel,
-} from "@mui/material";
+  Chip,
+} from "@/components/ui/brand";
+import { Grid, Stack, Typography, Skeleton, CircularProgress } from "@mui/material";
 
 type DailyEntryRow = Database["public"]["Tables"]["daily_entries"]["Row"];
 
@@ -144,9 +139,7 @@ const Checkins: React.FC = () => {
     [user, selectedProjectId, page, memberFilter]
   );
 
-  useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+  useEffect(() => { loadProjects(); }, [loadProjects]);
 
   useEffect(() => {
     if (!selectedProjectId) return;
@@ -155,8 +148,7 @@ const Checkins: React.FC = () => {
     setPage(0);
     loadMembers();
     loadEntries(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProjectId, loadMembers]);
+  }, [selectedProjectId, loadMembers]); // eslint-disable-line
 
   useEffect(() => {
     if (!selectedProjectId) return;
@@ -253,12 +245,12 @@ const Checkins: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" className="px-4 py-6">
+    <Container maxWidth="lg">
       <Card className="mb-4">
         <CardContent>
           <Grid container spacing={2} alignItems="center" justifyContent="space-between">
             <Grid item>
-              <Button variant="outlined" onClick={() => navigate("/dashboard")} startIcon={<ArrowLeft size={18} />}>
+              <Button tone="outline" onClick={() => navigate("/dashboard")} startIcon={<ArrowLeft size={18} />}>
                 Dashboard
               </Button>
             </Grid>
@@ -294,12 +286,9 @@ const Checkins: React.FC = () => {
                     label="Member"
                     value={memberFilter}
                     onChange={(e) => setMemberFilter(e.target.value as any)}
-                    disabled={!selectedProjectId}
                   >
                     <MenuItem value="all">All Members</MenuItem>
-                    <MenuItem value="mine" disabled={!user}>
-                      My Entries
-                    </MenuItem>
+                    <MenuItem value="mine">My Entries</MenuItem>
                     {members
                       .filter((m) => m.user_id !== user?.id)
                       .map((m) => (
@@ -310,12 +299,7 @@ const Checkins: React.FC = () => {
                   </Select>
                 </FormControl>
 
-                <Button
-                  variant="contained"
-                  onClick={() => navigate("/checkin")}
-                  disabled={!selectedProjectId}
-                  startIcon={<PlusCircle size={18} />}
-                >
+                <Button tone="primary" onClick={() => navigate("/checkin")} disabled={!selectedProjectId} startIcon={<PlusCircle size={18} />}>
                   New Check-In
                 </Button>
               </Stack>
@@ -324,7 +308,6 @@ const Checkins: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* List card */}
       <Card className="mb-4">
         <CardContent>
           <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
@@ -347,7 +330,7 @@ const Checkins: React.FC = () => {
           {loadingEntries && entries.length === 0 ? (
             <div>
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-[60px] rounded-2xl bg-white/10 animate-pulse mb-1.5" />
+                <div key={i} className="mb-1.5 h-[60px] animate-pulse rounded-2xl bg-white/10" />
               ))}
             </div>
           ) : entries.length === 0 ? (
@@ -360,17 +343,17 @@ const Checkins: React.FC = () => {
                 return (
                   <li key={entry.id} className="rounded-2xl border border-white/10 bg-white/[0.03]">
                     <div className="flex items-start gap-3 px-2.5 py-2">
-                      <div className="grid text-sm font-semibold h-9 w-9 shrink-0 rounded-xl bg-white/10 place-items-center">
+                      <div className="grid text-sm font-semibold h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10">
                         {(entry.created_by || "?").slice(0, 1).toUpperCase()}
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="inline-flex items-center rounded-full bg-cyan-400/15 text-cyan-200 border border-cyan-300/20 px-2 py-0.5 text-[11px] font-semibold">
+                          <span className="inline-flex items-center rounded-full border border-cyan-300/20 bg-cyan-400/15 px-2 py-0.5 text-[11px] font-semibold text-cyan-200">
                             {(entry.hours_worked ?? 0)}h
                           </span>
                           {entry.hours_wasted ? (
-                            <span className="inline-flex items-center rounded-full bg-amber-400/15 text-amber-200 border border-amber-300/20 px-2 py-0.5 text-[11px] font-semibold">
+                            <span className="inline-flex items-center rounded-full border border-amber-300/20 bg-amber-400/15 px-2 py-0.5 text-[11px] font-semibold text-amber-200">
                               Lost {entry.hours_wasted}h
                             </span>
                           ) : null}
@@ -396,9 +379,7 @@ const Checkins: React.FC = () => {
                       <div className="ml-auto flex items-center gap-1.5 pl-2">
                         <button
                           className={`rounded-lg p-2 transition ${
-                            canEdit
-                              ? "text-white/80 hover:text-white hover:bg-white/10"
-                              : "text-white/40 cursor-not-allowed"
+                            canEdit ? "text-white/80 hover:bg-white/10 hover:text-white" : "cursor-not-allowed text-white/40"
                           }`}
                           onClick={() => canEdit && openEdit(entry)}
                           title={
@@ -414,9 +395,7 @@ const Checkins: React.FC = () => {
                         </button>
                         <button
                           className={`rounded-lg p-2 transition ${
-                            canDelete
-                              ? "text-white/80 hover:text-white hover:bg-white/10"
-                              : "text-white/40 cursor-not-allowed"
+                            canDelete ? "text-white/80 hover:bg-white/10 hover:text-white" : "cursor-not-allowed text-white/40"
                           }`}
                           onClick={() => canDelete && confirmDelete(entry)}
                           title={canDelete ? "Delete entry" : "You can only delete your own entries"}
@@ -434,9 +413,9 @@ const Checkins: React.FC = () => {
 
           <div className="flex justify-center mt-3">
             {hasMore && (
-              <button className="btn btn-outline" onClick={loadMore} disabled={loadingEntries}>
+              <Button tone="outline" onClick={loadMore} disabled={loadingEntries}>
                 {loadingEntries ? "Loading…" : "Load More"}
-              </button>
+              </Button>
             )}
           </div>
         </CardContent>
@@ -444,12 +423,7 @@ const Checkins: React.FC = () => {
 
       {/* Edit Modal */}
       {editingEntry && (
-        <Dialog
-          open={Boolean(editingEntry)}
-          onClose={() => !savingEdit && resetEditState()}
-          maxWidth="sm"
-          fullWidth
-        >
+        <Dialog open={Boolean(editingEntry)} onClose={() => !savingEdit && resetEditState()} maxWidth="sm" fullWidth>
           <DialogTitle>Edit Check-In</DialogTitle>
           <DialogContent>
             <Stack spacing={2}>
@@ -458,14 +432,16 @@ const Checkins: React.FC = () => {
                 type="number"
                 value={editHoursWorked}
                 onChange={(e) => setEditHoursWorked(e.target.value)}
-                InputProps={{ inputProps: { min: 0, step: 0.25 } }}
+                inputProps={{ min: 0, step: 0.25 }}
+                dense
               />
               <TextField
                 label="Hours Wasted"
                 type="number"
                 value={editHoursWasted}
                 onChange={(e) => setEditHoursWasted(e.target.value)}
-                InputProps={{ inputProps: { min: 0, step: 0.25 } }}
+                inputProps={{ min: 0, step: 0.25 }}
+                dense
               />
               <TextField
                 label="Completed / Achievements"
@@ -473,7 +449,7 @@ const Checkins: React.FC = () => {
                 onChange={(e) => setEditCompleted(e.target.value)}
                 multiline
                 minRows={3}
-                variant="outlined"
+                dense
               />
               <TextField
                 label="Plan / Next Steps"
@@ -481,7 +457,7 @@ const Checkins: React.FC = () => {
                 onChange={(e) => setEditPlan(e.target.value)}
                 multiline
                 minRows={2}
-                variant="outlined"
+                dense
               />
               <Typography variant="caption" color="textSecondary">
                 Entry Date: {editingEntry.entry_date}
@@ -489,10 +465,10 @@ const Checkins: React.FC = () => {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => !savingEdit && resetEditState()} disabled={savingEdit}>
+            <Button onClick={() => !savingEdit && resetEditState()} disabled={savingEdit} tone="outline">
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={savingEdit} color="primary">
+            <Button onClick={handleSaveEdit} disabled={savingEdit} tone="primary">
               {savingEdit ? "Saving…" : "Save"}
             </Button>
           </DialogActions>
@@ -501,30 +477,18 @@ const Checkins: React.FC = () => {
 
       {/* Delete Confirm Modal */}
       {deleteEntry && (
-        <Dialog
-          open={Boolean(deleteEntry)}
-          onClose={() => !deleting && setDeleteEntry(null)}
-          maxWidth="sm"
-          fullWidth
-        >
+        <Dialog open={Boolean(deleteEntry)} onClose={() => !deleting && setDeleteEntry(null)} maxWidth="sm" fullWidth>
           <DialogTitle>Delete Check-In</DialogTitle>
           <DialogContent>
             <Typography variant="body1" gutterBottom>
-              This will permanently remove the entry for{" "}
-              <strong>{deleteEntry.entry_date}</strong>. This action cannot be undone.
+              This will permanently remove the entry for <strong>{deleteEntry.entry_date}</strong>. This action cannot be undone.
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => !deleting && setDeleteEntry(null)} disabled={deleting}>
+            <Button onClick={() => !deleting && setDeleteEntry(null)} disabled={deleting} tone="outline">
               Cancel
             </Button>
-            <Button
-              onClick={handleDelete}
-              disabled={deleting}
-              color="secondary"
-              variant="contained"
-              startIcon={deleting ? <CircularProgress size={16} /> : undefined}
-            >
+            <Button onClick={handleDelete} disabled={deleting} tone="primary" startIcon={deleting ? <CircularProgress size={16} /> : undefined}>
               {deleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogActions>

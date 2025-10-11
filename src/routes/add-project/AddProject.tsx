@@ -1,20 +1,17 @@
 import React, { useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
-import type { Database } from "../../types/supabase";
-import FileUpload from "../../components/FileUpload";
+import type { Database } from "@/types/supabase";
+import FileUpload from "@/components/FileUpload";
 import { useNavigate } from "react-router-dom";
+import { Grid, Typography } from "@mui/material";
 import {
-  Box,
-  Button,
+  Container,
   Card,
   CardContent,
-  Container,
-  Grid,
+  Button,
   TextField,
-  Typography,
-  Divider,
-} from "@mui/material";
+} from "@/components/ui/brand";
 
 type ProjectsTable = Database["public"]["Tables"]["projects"]["Row"];
 const LOGO_BUCKET = "project-logos";
@@ -34,7 +31,7 @@ async function uploadLogo(projectId: string, file: File) {
   let url = pub?.publicUrl || null;
 
   if (!url) {
-    const { data: signed, error: signedErr } = await supabase.storage
+    const { data: signed, error: signedErr } = await supabase
       .from(LOGO_BUCKET)
       .createSignedUrl(objectName, 60 * 60 * 24 * 30);
     if (signedErr) throw signedErr;
@@ -63,24 +60,16 @@ export async function createProject(input: CreateProjectInput) {
 
   const projectId = project.id as string;
 
-  // Ensure membership
   if (input.owner_email) {
     const { error: memErr } = await supabase
       .from("project_members")
       .upsert(
-        [
-          {
-            project_id: projectId,
-            user_id: input.owner_id,
-            email: input.owner_email,
-          },
-        ],
+        [{ project_id: projectId, user_id: input.owner_id, email: input.owner_email }],
         { onConflict: "project_id,user_id" }
       );
     if (memErr) toast.error(memErr.message);
   }
 
-  // Logo
   if (input.logoFile) {
     try {
       const logoUrl = await uploadLogo(projectId, input.logoFile);
@@ -91,7 +80,6 @@ export async function createProject(input: CreateProjectInput) {
     }
   }
 
-  // Optional initial projection
   if (
     (input.initialValuation != null && !isNaN(input.initialValuation)) ||
     (input.workHoursRemaining != null && !isNaN(input.workHoursRemaining))
@@ -110,24 +98,18 @@ export async function createProject(input: CreateProjectInput) {
 }
 
 const AddProject = ({ ownerId, ownerEmail }: { ownerId: string; ownerEmail: string | null }) => {
-  const [form, setForm] = useState<{
-    name: string;
-    initialValuation: string;
-    workHoursRemaining: string;
-    logoFile: File | null;
-    logoPreview: string | null;
-  }>({
+  const [form, setForm] = useState({
     name: "",
     initialValuation: "",
     workHoursRemaining: "",
-    logoFile: null,
-    logoPreview: null,
+    logoFile: null as File | null,
+    logoPreview: null as string | null,
   });
-
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleChange = (field: string, value: any) => setForm((f) => ({ ...f, [field]: value }));
+  const handleChange = (field: string, value: any) =>
+    setForm((f) => ({ ...f, [field]: value }));
 
   const handleLogoPick = (file: File | null) => {
     setForm((f) => {
@@ -137,11 +119,7 @@ const AddProject = ({ ownerId, ownerEmail }: { ownerId: string; ownerEmail: stri
         toast.error("Image too large (>5MB)");
         return { ...f };
       }
-      return {
-        ...f,
-        logoFile: file,
-        logoPreview: URL.createObjectURL(file),
-      };
+      return { ...f, logoFile: file, logoPreview: URL.createObjectURL(file) };
     });
   };
 
@@ -157,14 +135,22 @@ const AddProject = ({ ownerId, ownerEmail }: { ownerId: string; ownerEmail: stri
         name: form.name.trim(),
         owner_id: ownerId,
         owner_email: ownerEmail,
-        initialValuation: form.initialValuation === "" ? null : Number(form.initialValuation),
-        workHoursRemaining: form.workHoursRemaining === "" ? null : Number(form.workHoursRemaining),
+        initialValuation:
+          form.initialValuation === "" ? null : Number(form.initialValuation),
+        workHoursRemaining:
+          form.workHoursRemaining === "" ? null : Number(form.workHoursRemaining),
         logoFile: form.logoFile || undefined,
       });
       toast.success("Project created!");
       navigate("/dashboard");
       if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
-      setForm({ name: "", initialValuation: "", workHoursRemaining: "", logoFile: null, logoPreview: null });
+      setForm({
+        name: "",
+        initialValuation: "",
+        workHoursRemaining: "",
+        logoFile: null,
+        logoPreview: null,
+      });
     } catch (e: any) {
       toast.error(e.message || "Failed to create project");
     } finally {
@@ -173,32 +159,27 @@ const AddProject = ({ ownerId, ownerEmail }: { ownerId: string; ownerEmail: stri
   };
 
   return (
-    <Container maxWidth="sm" className="px-4 py-6">
-      <Box mb={2}>
-        <Card className="relative mb-4 overflow-hidden">
-          <Box className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-rose-400 to-cyan-400" />
-          <CardContent>
-            <Typography variant="h4" fontWeight={900}>
-              Create a New Project
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Set the basics now. You can change details later in Settings.
-            </Typography>
-          </CardContent>
-        </Card>
-      </Box>
+    <Container maxWidth="sm">
+      <Card accent className="mb-4">
+        <CardContent>
+          <Typography variant="h4" fontWeight={900}>
+            Create a New Project
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Set the basics now. You can change details later in Settings.
+          </Typography>
+        </CardContent>
+      </Card>
 
-      <Card component="form" onSubmit={handleSubmit} className="relative overflow-hidden">
-        <Box className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-rose-400 to-cyan-400" />
+      <Card component="form" onSubmit={handleSubmit} accent>
         <CardContent>
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <TextField
                 label="Project Name"
-                fullWidth
                 value={form.name}
                 onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="e.g. Sweat Equity OS"
+                placeholder="e.g. Speed Equity OS"
                 required
                 disabled={loading}
               />
@@ -207,7 +188,6 @@ const AddProject = ({ ownerId, ownerEmail }: { ownerId: string; ownerEmail: stri
               <TextField
                 label="Initial Valuation (optional)"
                 type="number"
-                fullWidth
                 value={form.initialValuation}
                 onChange={(e) => handleChange("initialValuation", e.target.value)}
                 placeholder="e.g. 2500000"
@@ -219,7 +199,6 @@ const AddProject = ({ ownerId, ownerEmail }: { ownerId: string; ownerEmail: stri
               <TextField
                 label="Work Hours Remaining (optional)"
                 type="number"
-                fullWidth
                 value={form.workHoursRemaining}
                 onChange={(e) => handleChange("workHoursRemaining", e.target.value)}
                 placeholder="e.g. 1200"
@@ -245,23 +224,22 @@ const AddProject = ({ ownerId, ownerEmail }: { ownerId: string; ownerEmail: stri
                 }}
               />
               {form.logoPreview && (
-                <Box mt={2} display="flex" alignItems="center" gap={2}>
+                <div className="flex items-center gap-2 mt-2">
                   <img
                     src={form.logoPreview}
                     alt="Logo preview"
-                    className="rounded-xl"
-                    style={{ width: 56, height: 56, objectFit: "cover" }}
+                    className="object-cover h-14 w-14 rounded-xl"
                   />
                   {form.logoFile && (
                     <Typography variant="caption" color="text.secondary" className="truncate">
                       {form.logoFile.name}
                     </Typography>
                   )}
-                </Box>
+                </div>
               )}
             </Grid>
             <Grid item xs={12}>
-              <Button type="submit" variant="contained" fullWidth disabled={loading}>
+              <Button type="submit" tone="primary" fullWidth disabled={loading}>
                 {loading ? "Creating..." : "Create Project"}
               </Button>
             </Grid>

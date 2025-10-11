@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import { useForm } from "react-hook-form";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { Alert } from "@mui/material";
 import {
   Dialog,
   DialogTitle,
@@ -9,10 +10,7 @@ import {
   DialogActions,
   Button,
   TextField,
-  FormControlLabel,
-  Checkbox,
-  Alert,
-} from "@mui/material";
+} from "@/components/ui/brand";
 
 interface DailyCheckInForm {
   workoutCompleted: boolean;
@@ -30,7 +28,6 @@ const DailyCheckInDialog: React.FC<{
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Close on ESC
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -40,7 +37,7 @@ const DailyCheckInDialog: React.FC<{
 
   useEffect(() => {
     if (!open || !projectId) return;
-    const checkIfEntryExists = async () => {
+    (async () => {
       const { data } = await supabase
         .from("daily_entries")
         .select("*")
@@ -48,8 +45,7 @@ const DailyCheckInDialog: React.FC<{
         .eq("entry_date", dayjs().subtract(1, "day").format("YYYY-MM-DD"))
         .maybeSingle();
       setHasCheckedIn(!!data);
-    };
-    checkIfEntryExists();
+    })();
   }, [open, projectId]);
 
   const onSubmit = async (data: DailyCheckInForm) => {
@@ -81,39 +77,37 @@ const DailyCheckInDialog: React.FC<{
       <DialogContent dividers>
         {hasCheckedIn && <Alert severity="info" sx={{ mb: 2 }}>You already checked in for yesterday.</Alert>}
         <form id="checkin-form" onSubmit={handleSubmit(onSubmit)}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                {...register("workoutCompleted")}
-                onChange={(e) => setValue("workoutCompleted", e.target.checked)}
-                disabled={hasCheckedIn}
-              />
-            }
-            label="Did you complete your workout yesterday?"
-          />
+          <label className="inline-flex items-center gap-2 px-2 py-1 border rounded-lg bg-white/5 border-white/10">
+            <input
+              type="checkbox"
+              className="w-4 h-4 accent-cyan-400"
+              {...register("workoutCompleted")}
+              onChange={(e) => setValue("workoutCompleted", e.target.checked)}
+              disabled={hasCheckedIn}
+            />
+            <span>Did you complete your workout yesterday?</span>
+          </label>
+
           <TextField
             label="Hours Worked"
             type="number"
-            fullWidth
-            margin="normal"
+            dense
             inputProps={{ step: 0.1, min: 0 }}
             disabled={hasCheckedIn}
             {...register("hoursWorked", { valueAsNumber: true, required: true })}
           />
           <TextField
             label="What did you achieve?"
-            fullWidth
-            margin="normal"
             multiline
             minRows={4}
+            dense
             disabled={hasCheckedIn}
             {...register("achievements")}
           />
           <TextField
             label="Hours Wasted"
             type="number"
-            fullWidth
-            margin="normal"
+            dense
             inputProps={{ step: 0.1, min: 0 }}
             disabled={hasCheckedIn}
             {...register("hoursWasted", { valueAsNumber: true, required: true })}
@@ -121,10 +115,8 @@ const DailyCheckInDialog: React.FC<{
         </form>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} variant="outlined">
-          Cancel
-        </Button>
-        <Button type="submit" form="checkin-form" variant="contained" disabled={hasCheckedIn || submitting}>
+        <Button tone="outline" onClick={onClose}>Cancel</Button>
+        <Button type="submit" form="checkin-form" tone="primary" disabled={hasCheckedIn || submitting}>
           {hasCheckedIn ? "Already Submitted" : submitting ? "Submitting…" : "Submit"}
         </Button>
       </DialogActions>

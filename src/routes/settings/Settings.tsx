@@ -6,16 +6,17 @@ import { useAuth } from "../../components/AuthProvider";
 import { supabase } from "../../lib/supabase";
 import type { Database } from "../../types/supabase";
 import {
-  Avatar,
-  Box,
-  Button,
+  Container,
   Card,
   CardContent,
+  Button,
+} from "@/components/ui/brand";
+import {
+  Avatar,
+  Box,
   Chip,
-  Container,
   Divider,
   Grid,
-  IconButton,
   Skeleton,
   Stack,
   TextField,
@@ -60,9 +61,7 @@ const Settings: React.FC = () => {
   const [logoUploading, setLogoUploading] = useState(false);
   const [nameSyncing, setNameSyncing] = useState<Record<string, boolean>>({});
   const [projectionSyncing, setProjectionSyncing] = useState<Record<string, boolean>>({});
-  const [projectionStatus, setProjectionStatus] = useState<
-    Record<string, "idle" | "pending" | "saved" | "error">
-  >({});
+  const [projectionStatus, setProjectionStatus] = useState<Record<string, "idle" | "pending" | "saved" | "error">>({});
   const [projectionDirty, setProjectionDirty] = useState<Record<string, boolean>>({});
   const [nameFocused, setNameFocused] = useState<Record<string, boolean>>({});
 
@@ -88,19 +87,13 @@ const Settings: React.FC = () => {
     if (!user) return;
     setLoading(true);
     const [{ data: memberProjects, error: mErr }, { data: invites, error: iErr }] = await Promise.all([
-      supabase
-        .from("project_members")
-        .select("project_id, projects(name, logo_url, owner_id)")
-        .eq("user_id", user.id),
+      supabase.from("project_members").select("project_id, projects(name, logo_url, owner_id)").eq("user_id", user.id),
       supabase.from("project_invitations").select("project_id, projects(name, logo_url)").eq("user_id", user.id),
     ]);
     if (mErr) toastError(mErr);
     if (iErr) toastError(iErr);
     setMyProjects(
-      (memberProjects ?? []).map((m) => ({
-        ...m,
-        projects: { ...m.projects, logo_url: normalizeLogoUrl(m.projects.logo_url) },
-      }))
+      (memberProjects ?? []).map((m) => ({ ...m, projects: { ...m.projects, logo_url: normalizeLogoUrl(m.projects.logo_url) } }))
     );
     setPendingInvites(invites ?? []);
     setLoading(false);
@@ -142,8 +135,7 @@ const Settings: React.FC = () => {
         setEditValuation((p) => ({ ...p, [projectId]: projection.valuation != null ? String(projection.valuation) : "" }));
         setEditHours((p) => ({
           ...p,
-          [projectId]:
-            projection.work_hours_until_completion != null ? String(projection.work_hours_until_completion) : "",
+          [projectId]: projection.work_hours_until_completion != null ? String(projection.work_hours_until_completion) : "",
         }));
         setProjectionDirty((prev) => ({ ...prev, [projectId]: false }));
       }
@@ -296,14 +288,10 @@ const Settings: React.FC = () => {
   );
 
   return (
-    <Container maxWidth="md" className="px-4 py-6">
+    <Container maxWidth="md">
       <Box mb={2} display="flex" alignItems="center" justifyContent="space-between">
-        <Typography variant="h4" fontWeight={900}>
-          My Projects
-        </Typography>
-        <Button variant="outlined" onClick={() => navigate("/dashboard")}>
-          Dashboard
-        </Button>
+        <Typography variant="h4" fontWeight={900}>My Projects</Typography>
+        <Button tone="outline" onClick={() => navigate("/dashboard")}>Dashboard</Button>
       </Box>
       <Divider className="!border-white/10" />
 
@@ -315,10 +303,7 @@ const Settings: React.FC = () => {
       ) : (
         <>
           <Stack spacing={2} mt={2}>
-            {myProjects.length === 0 && (
-              <Box className="py-2 text-center text-white/70">You are not a member of any projects.</Box>
-            )}
-
+            {myProjects.length === 0 && <Box className="py-2 text-center text-white/70">You are not a member of any projects.</Box>}
             {myProjects.map((p) => {
               const projId = p.project_id;
               const owned = ownershipMap.get(projId) === true;
@@ -326,23 +311,17 @@ const Settings: React.FC = () => {
               const projProjectionState = projectionStatus[projId] || "idle";
 
               return (
-                <Card key={projId} variant="outlined" className="overflow-hidden">
+                <Card key={projId} className="overflow-hidden" variant="outlined">
                   <CardContent className="!p-0">
                     <Button
                       onClick={() => toggleExpand(projId, p)}
                       className="!w-full !justify-between !rounded-none !px-3 !py-3 hover:!bg-white/10"
                     >
                       <Box display="flex" alignItems="center" gap={1.5} minWidth={0} flex={1}>
-                        <Avatar
-                          src={normalizeLogoUrl(p.projects.logo_url) || undefined}
-                          alt=""
-                          sx={{ width: 48, height: 48, borderRadius: 2 }}
-                        />
+                        <Avatar src={normalizeLogoUrl(p.projects.logo_url) || undefined} alt="" sx={{ width: 48, height: 48, borderRadius: 2 }} />
                         <Box minWidth={0} textAlign="left">
                           <Box display="flex" alignItems="center" gap={1}>
-                            <Typography className="truncate" fontWeight={600}>
-                              {p.projects.name}
-                            </Typography>
+                            <Typography className="truncate" fontWeight={600}>{p.projects.name}</Typography>
                             {owned && <Chip size="small" label="Owner" color="success" variant="outlined" />}
                           </Box>
                         </Box>
@@ -356,27 +335,13 @@ const Settings: React.FC = () => {
                         <Box className="p-4 space-y-4 sm:p-5">
                           <Box display="flex" alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap">
                             <Stack direction="row" spacing={2} alignItems="center">
-                              <Avatar
-                                src={normalizeLogoUrl(p.projects.logo_url) || undefined}
-                                alt=""
-                                sx={{ width: 72, height: 72, borderRadius: 2 }}
-                              />
-                              <Button
-                                variant="outlined"
-                                startIcon={<Camera size={18} />}
-                                disabled={!owned || logoUploading}
-                                onClick={() => handleLogoUpload(projId, owned)}
-                              >
+                              <Avatar src={normalizeLogoUrl(p.projects.logo_url) || undefined} alt="" sx={{ width: 72, height: 72, borderRadius: 2 }} />
+                              <Button tone="outline" startIcon={<Camera size={18} />} disabled={!owned || logoUploading} onClick={() => handleLogoUpload(projId, owned)}>
                                 {logoUploading ? "Uploading..." : "Change Logo"}
                               </Button>
                             </Stack>
                             {owned && (
-                              <Button
-                                variant="outlined"
-                                color="warning"
-                                startIcon={<ShieldAlert size={18} />}
-                                onClick={() => handleTransferOwnership(projId)}
-                              >
+                              <Button tone="outline" onClick={() => handleTransferOwnership(projId)} startIcon={<ShieldAlert size={18} />}>
                                 Transfer Ownership
                               </Button>
                             )}
@@ -385,7 +350,6 @@ const Settings: React.FC = () => {
                           <Box>
                             <TextField
                               label="Project Name"
-                              fullWidth
                               value={editName[projId] ?? ""}
                               disabled={!owned}
                               onFocus={() => owned && setNameFocused((prev) => ({ ...prev, [projId]: true }))}
@@ -395,15 +359,7 @@ const Settings: React.FC = () => {
                                 setNameFocused((prev) => ({ ...prev, [projId]: false }));
                               }}
                               onChange={(e) => setEditName((prev) => ({ ...prev, [projId]: e.target.value }))}
-                              helperText={
-                                !owned
-                                  ? "Read-only"
-                                  : nameSyncing[projId]
-                                  ? "Saving..."
-                                  : nameFocused[projId]
-                                  ? "Click off to save"
-                                  : "Up to date"
-                              }
+                              helperText={!owned ? "Read-only" : nameSyncing[projId] ? "Saving..." : nameFocused[projId] ? "Click off to save" : "Up to date"}
                             />
                           </Box>
 
@@ -414,7 +370,6 @@ const Settings: React.FC = () => {
                               <TextField
                                 label="Active Valuation (USD)"
                                 type="number"
-                                fullWidth
                                 disabled={!owned}
                                 value={editValuation[projId] ?? ""}
                                 onChange={(e) => {
@@ -428,7 +383,6 @@ const Settings: React.FC = () => {
                               <TextField
                                 label="Work Hours Remaining"
                                 type="number"
-                                fullWidth
                                 disabled={!owned}
                                 value={editHours[projId] ?? ""}
                                 onChange={(e) => {
@@ -442,30 +396,17 @@ const Settings: React.FC = () => {
 
                           {owned && (
                             <Stack direction="row" spacing={1} alignItems="center">
-                              <Button
-                                variant="contained"
-                                onClick={() => saveProjection(projId, owned)}
-                                disabled={
-                                  projectionSyncing[projId] ||
-                                  !projectionDirty[projId] ||
-                                  !editValuation[projId] ||
-                                  !editHours[projId]
-                                }
-                              >
+                              <Button tone="primary" onClick={() => saveProjection(projId, owned)} disabled={projectionSyncing[projId] || !projectionDirty[projId] || !editValuation[projId] || !editHours[projId]}>
                                 {projectionSyncing[projId] ? "Saving..." : "Save Projection"}
                               </Button>
                               <Typography variant="caption" color="text.secondary">
-                                {projectionDirty[projId]
-                                  ? "Click save to persist changes"
-                                  : projProjectionState === "saved"
-                                  ? "Projection up to date"
-                                  : ""}
+                                {projectionDirty[projId] ? "Click save to persist changes" : projProjectionState === "saved" ? "Projection up to date" : ""}
                               </Typography>
                             </Stack>
                           )}
 
                           {!owned && (
-                            <Button variant="outlined" color="error" onClick={() => handleLeaveProject(projId)}>
+                            <Button tone="outline" onClick={() => handleLeaveProject(projId)}>
                               <LogOut size={18} />
                               &nbsp;Leave Project
                             </Button>
@@ -494,21 +435,13 @@ const Settings: React.FC = () => {
                     <CardContent className="!py-3">
                       <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
                         <Stack direction="row" spacing={2} alignItems="center" minWidth={0}>
-                          <Avatar
-                            src={normalizeLogoUrl(invite.projects.logo_url) || undefined}
-                            alt=""
-                            sx={{ width: 48, height: 48, borderRadius: 2 }}
-                          />
+                          <Avatar src={normalizeLogoUrl(invite.projects.logo_url) || undefined} alt="" sx={{ width: 48, height: 48, borderRadius: 2 }} />
                           <Box minWidth={0}>
-                            <Typography fontWeight={600} className="truncate">
-                              {invite.projects.name}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              You’ve been invited to join this project.
-                            </Typography>
+                            <Typography fontWeight={600} className="truncate">{invite.projects.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">You’ve been invited to join this project.</Typography>
                           </Box>
                         </Stack>
-                        <Button variant="contained" onClick={() => handleJoinProject(invite.project_id)}>
+                        <Button tone="primary" onClick={() => handleJoinProject(invite.project_id)}>
                           Join Project
                         </Button>
                       </Stack>
@@ -519,20 +452,18 @@ const Settings: React.FC = () => {
             )}
 
             <Box textAlign="center" mt={3}>
-              <Button variant="contained" startIcon={<Plus size={18} />} onClick={() => navigate("/add-project")}>
+              <Button tone="primary" startIcon={<Plus size={18} />} onClick={() => navigate("/add-project")}>
                 New Project
               </Button>
             </Box>
           </Box>
 
-          <Divider className="!border-white/10 my-6" />
+          <Divider className="my-6 !border-white/10" />
 
           <Box>
-            <Typography variant="h5" fontWeight={800} gutterBottom>
-              Profile
-            </Typography>
+            <Typography variant="h5" fontWeight={800} gutterBottom>Profile</Typography>
             <Typography>Signed in as {user.email}</Typography>
-            <Button variant="outlined" color="error" sx={{ mt: 2 }} onClick={signOut} startIcon={<LogOut size={18} />}>
+            <Button tone="outline" className="mt-2" onClick={signOut} startIcon={<LogOut size={18} />}>
               Sign Out
             </Button>
           </Box>

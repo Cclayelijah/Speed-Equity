@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../../components/AuthProvider";
+import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
-import { Box, Button, Card, CardContent, Container, TextField, Typography, Alert } from "@mui/material";
+import { Typography, Alert } from "@mui/material";
+import { Container, Card, CardContent, TextField, Button } from "@/components/ui/brand";
 
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,16 +29,15 @@ const AuthPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="sm" className="px-4 py-20">
+      <Container maxWidth="sm" className="py-20">
         <Typography align="center">Loading…</Typography>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="sm" className="px-4 py-12">
-      <Card className="relative overflow-hidden">
-        <Box className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-rose-400 to-cyan-400" />
+    <Container maxWidth="sm" className="py-12">
+      <Card accent>
         <CardContent>
           <Typography variant="h4" fontWeight={900} gutterBottom>
             Welcome back
@@ -45,7 +45,8 @@ const AuthPage: React.FC = () => {
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Use your email to receive a magic link.
           </Typography>
-          <Box component="form" onSubmit={handleSignIn} mt={2}>
+
+          <form onSubmit={handleSignIn} className="mt-2">
             <TextField
               id="email"
               type="email"
@@ -56,14 +57,12 @@ const AuthPage: React.FC = () => {
               placeholder="you@example.com"
               required
               disabled={submitting}
-              fullWidth
-              margin="normal"
             />
-            <Button type="submit" variant="contained" fullWidth disabled={submitting || !email}>
+            <Button type="submit" tone="primary" fullWidth disabled={submitting || !email}>
               {submitting ? "Sending…" : "Send Magic Link"}
             </Button>
             {sent && <Alert severity="success" sx={{ mt: 2 }}>Check your inbox for the magic link.</Alert>}
-          </Box>
+          </form>
         </CardContent>
       </Card>
     </Container>

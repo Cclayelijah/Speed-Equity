@@ -1,25 +1,26 @@
-import React from 'react';
-import { Card, CardContent, Typography, Box } from '@mui/material';
+import React from "react";
+import { Typography } from "@mui/material";
+import { Card, CardContent } from "@/components/ui/brand";
 
 interface KpiCardProps {
   title: string;
   value: number | null | undefined;
+  /** Optional mini-sparkline path ("d" attribute). Rendered only if valid string without "undefined". */
   d?: string;
+  className?: string;
 }
 
-// Only render if d is a non-empty string and does not contain "undefined"
 const isValidPath = (d?: string) =>
-  typeof d === 'string' && d.length > 0 && !d.includes('undefined');
+  typeof d === "string" && d.length > 0 && !d.includes("undefined");
 
-const KpiCard: React.FC<KpiCardProps> = ({ title, value, d }) => {
+export default function KpiCard({ title, value, d, className }: KpiCardProps) {
   const display =
     value !== null && value !== undefined
       ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
-      : '—';
+      : "—";
 
   return (
-    <Card className="relative overflow-hidden">
-      <Box className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500/70 via-rose-400/70 to-cyan-400/70" />
+    <Card accent className={className}>
       <CardContent>
         <Typography variant="overline" color="text.secondary">
           {title}
@@ -27,6 +28,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, value, d }) => {
         <Typography variant="h5" fontWeight={800} mt={0.5}>
           {display}
         </Typography>
+
         {isValidPath(d) && (
           <svg
             width="40"
@@ -49,6 +51,4 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, value, d }) => {
       </CardContent>
     </Card>
   );
-};
-
-export default KpiCard;
+}

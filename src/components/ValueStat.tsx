@@ -1,5 +1,6 @@
-import React from 'react';
-import { Card, CardContent, Typography } from '@mui/material';
+import React from "react";
+import { Typography } from "@mui/material";
+import { Card, CardContent } from "@/components/ui/brand";
 
 interface ValueStatProps {
   label: string;
@@ -8,10 +9,19 @@ interface ValueStatProps {
   className?: string;
 }
 
-const ValueStat: React.FC<ValueStatProps> = ({ label, value, currency = '$', className = '' }) => {
-  const display = `${currency}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export default function ValueStat({
+  label,
+  value,
+  currency = "$",
+  className = "",
+}: ValueStatProps) {
+  const display = `${currency}${value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
   return (
-    <Card className={className}>
+    <Card accent className={className}>
       <CardContent>
         <Typography variant="overline" color="text.secondary">
           {label}
@@ -22,6 +32,4 @@ const ValueStat: React.FC<ValueStatProps> = ({ label, value, currency = '$', cla
       </CardContent>
     </Card>
   );
-};
-
-export default ValueStat;
+}

@@ -1,27 +1,31 @@
-/* styles/index.css */
-/* layer order (so mui < utilities) */
 @layer theme, base, mui, components, utilities;
 @import "tailwindcss";
 
-/* Tokens (this replaces tailwind.config.js' extend) */
+/* --- Minimal dark palette & spacing tokens (no rainbows) --- */
 @theme {
-  /* colors */
-  --color-app: #05060A;
-  --color-brand-pink: #ec4899;
-  --color-brand-cyan: #22d3ee;
-
-  /* radii */
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
-
-  /* shadows */
-  --shadow-soft: 0 8px 30px -10px rgba(255,255,255,0.35);
-  --shadow-card: 0 30px 80px -40px rgba(0,0,0,0.6);
+  --bg:            #05060A;       /* page background */
+  --surface:       #0B0D13;       /* cards, modals */
+  --surface-2:     #0F121A;       /* inputs */
+  --border:        255 255 255 / 0.10; /* rgba via slash syntax when used in rgb() */
+  --text:          #E7EAF3;       /* primary text */
+  --muted:         #9BA3B4;       /* secondary text */
+  --accent:        #22d3ee;       /* cyan (one accent only) */
+  --accent-600:    #06b6d4;       /* darker cyan for hover */
+  --radius:        14px;          /* consistent rounding */
+  --shadow-soft:   0 10px 30px -12px rgba(0,0,0,.5);
 }
 
+/* Base — no double reset, no rainbow, generous default padding rhythm */
 @layer base {
   html, body, #root { height: 100%; }
-  body { @apply antialiased text-white bg-app selection:bg-white/10 selection:text-white; }
+  body {
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection { background: rgba(34,211,238,.18); color: var(--text); }
 }
 
+/* (keep the rest of your imports after this line) */
 @import "./components.css";
