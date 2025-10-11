@@ -258,7 +258,7 @@ const Dashboard: React.FC = () => {
         <div className="absolute inset-x-0 h-px -top-px bg-gradient-to-r from-fuchsia-500 via-rose-400 to-cyan-400" />
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           {/* Live Data */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center ">
             <div className="inline-flex items-center gap-2 text-xs font-semibold text-white/70 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               Live dashboard

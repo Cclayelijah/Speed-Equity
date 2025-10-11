@@ -1,7 +1,27 @@
+/* styles/index.css */
+/* layer order (so mui < utilities) */
+@layer theme, base, mui, components, utilities;
 @import "tailwindcss";
+
+/* Tokens (this replaces tailwind.config.js' extend) */
+@theme {
+  /* colors */
+  --color-app: #05060A;
+  --color-brand-pink: #ec4899;
+  --color-brand-cyan: #22d3ee;
+
+  /* radii */
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+
+  /* shadows */
+  --shadow-soft: 0 8px 30px -10px rgba(255,255,255,0.35);
+  --shadow-card: 0 30px 80px -40px rgba(0,0,0,0.6);
+}
+
 @layer base {
   html, body, #root { height: 100%; }
-  body { @apply antialiased text-white bg-[#05060A] selection:bg-white/10 selection:text-white; }
+  body { @apply antialiased text-white bg-app selection:bg-white/10 selection:text-white; }
 }
-/* Keep component layer after base so @apply merges correctly */
-@import "./styles/components.css";
+
+@import "./components.css";
